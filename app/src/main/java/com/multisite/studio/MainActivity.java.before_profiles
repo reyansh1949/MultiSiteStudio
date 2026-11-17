@@ -1,0 +1,324 @@
+package com.multisite.studio;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.graphics.Color;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.*;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+
+public class MainActivity extends Activity {
+
+    private final ArrayList<WebView> webViews = new ArrayList<>();
+    private final ArrayList<EditText> urlFields = new ArrayList<>();
+
+    private LinearLayout root;
+    private GridLayout grid;
+    private EditText bulkUrl;
+    private Spinner countSpinner;
+    private int siteCount = 4;
+
+    private android.content.SharedPreferences prefs;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        prefs = getSharedPreferences("multisite_data", MODE_PRIVATE);
+
+        buildInterface();
+        createSites();
+    }
+
+    private void buildInterface() {
+        root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(6, 6, 6, 6);
+        root.setBackgroundColor(Color.rgb(245, 247, 250));
+
+        TextView title = new TextView(this);
+        title.setText("MULTISITE STUDIO");
+        title.setTextSize(22);
+        title.setTextColor(Color.rgb(21, 101, 192));
+        title.setGravity(Gravity.CENTER);
+        title.setPadding(4, 10, 4, 10);
+        root.addView(title);
+
+        LinearLayout countRow = new LinearLayout(this);
+        countRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView countLabel = new TextView(this);
+        countLabel.setText("Websites: ");
+        countLabel.setTextColor(Color.BLACK);
+        countRow.addView(countLabel);
+
+        countSpinner = new Spinner(this);
+        String[] counts = new String[20];
+        for (int i = 0; i < 20; i++) {
+            counts[i] = String.valueOf(i + 1);
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_dropdown_item, counts);
+        countSpinner.setAdapter(adapter);
+        countSpinner.setSelection(siteCount - 1);
+
+        countSpinner.setOnItemSelectedListener(
+                new android.widget.AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(
+                            android.widget.AdapterView<?> parent,
+                            View view, int position, long id) {
+
+                        int newCount = position + 1;
+
+                        if (newCount != siteCount) {
+                            siteCount = newCount;
+                            saveAllUrls();
+                            createSites();
+                        }
+                    }
+
+                    @Override
+                    public void onNothingSelected(
+                            android.widget.AdapterView<?> parent) {}
+                });
+
+        countRow.addView(countSpinner);
+        root.addView(countRow);
+
+        bulkUrl = new EditText(this);
+        bulkUrl.setSingleLine(true);
+        bulkUrl.setHint("Enter one URL for all websites");
+        root.addView(bulkUrl);
+
+        LinearLayout buttons = new LinearLayout(this);
+
+        Button openAll = new Button(this);
+        openAll.setText("Open All");
+        openAll.setOnClickListener(v -> openBulk());
+
+        Button refreshAll = new Button(this);
+        refreshAll.setText("Refresh All");
+        refreshAll.setOnClickListener(v -> {
+            for (WebView web : webViews) {
+                web.reload();
+            }
+        });
+
+        buttons.addView(openAll, new LinearLayout.LayoutParams(0, -2, 1));
+        buttons.addView(refreshAll, new LinearLayout.LayoutParams(0, -2, 1));
+        root.addView(buttons);
+
+        ScrollView scroll = new ScrollView(this);
+
+        grid = new GridLayout(this);
+        grid.setColumnCount(4);
+
+        scroll.addView(grid);
+
+        root.addView(scroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+
+        setContentView(root);
+    }
+
+    private void createSites() {
+        saveAllUrls();
+
+        for (WebView web : webViews) {
+            web.stopLoading();
+            web.destroy();
+        }
+
+        webViews.clear();
+        urlFields.clear();
+        grid.removeAllViews();
+
+        grid.setColumnCount(4);
+
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+        int cellWidth = screenWidth / 4 - 8;
+        int cellHeight = (int) (cellWidth * 1.25);
+
+        for (int i = 0; i < siteCount; i++) {
+
+            final int index = i;
+
+            LinearLayout cell = new LinearLayout(this);
+            cell.setOrientation(LinearLayout.VERTICAL);
+            cell.setBackgroundColor(Color.WHITE);
+            cell.setPadding(2, 2, 2, 2);
+
+            TextView label = new TextView(this);
+            label.setText("Site " + (i + 1));
+            label.setTextColor(Color.BLACK);
+            label.setGravity(Gravity.CENTER);
+            label.setTextSize(11);
+            cell.addView(label);
+
+            EditText url = new EditText(this);
+            url.setSingleLine(true);
+            url.setTextSize(9);
+            url.setHint("URL");
+            url.setText(prefs.getString("url_" + i, ""));
+            urlFields.add(url);
+
+            cell.addView(url, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 35));
+
+            WebView web = new WebView(this);
+            web.getSettings().setJavaScriptEnabled(true);
+            web.getSettings().setDomStorageEnabled(true);
+            web.getSettings().setSupportZoom(true);
+            web.getSettings().setBuiltInZoomControls(true);
+            web.getSettings().setDisplayZoomControls(false);
+            web.setWebViewClient(new WebViewClient());
+
+            webViews.add(web);
+
+            cell.addView(web, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+
+            LinearLayout actions = new LinearLayout(this);
+
+            Button open = new Button(this);
+            open.setText("Go");
+            open.setTextSize(9);
+            open.setPadding(0, 0, 0, 0);
+
+            open.setOnClickListener(v -> {
+                String address = normalizeUrl(urlFields.get(index).getText().toString());
+                if (address != null) {
+                    prefs.edit().putString("url_" + index, address).apply();
+                    webViews.get(index).loadUrl(address);
+                }
+            });
+
+            Button full = new Button(this);
+            full.setText("Full");
+            full.setTextSize(9);
+            full.setPadding(0, 0, 0, 0);
+            full.setOnClickListener(v -> showFullScreen(index));
+
+            actions.addView(open, new LinearLayout.LayoutParams(0, -2, 1));
+            actions.addView(full, new LinearLayout.LayoutParams(0, -2, 1));
+            cell.addView(actions);
+
+            GridLayout.LayoutParams params = new GridLayout.LayoutParams();
+            params.width = cellWidth;
+            params.height = cellHeight;
+            params.setMargins(2, 2, 2, 2);
+
+            grid.addView(cell, params);
+        }
+    }
+
+    private String normalizeUrl(String value) {
+        String address = value.trim();
+
+        if (address.isEmpty()) {
+            Toast.makeText(this, "Enter a URL", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+
+        if (!address.startsWith("http://")
+                && !address.startsWith("https://")) {
+            address = "https://" + address;
+        }
+
+        return address;
+    }
+
+    private void openBulk() {
+        String address = normalizeUrl(bulkUrl.getText().toString());
+
+        if (address == null) return;
+
+        for (int i = 0; i < webViews.size(); i++) {
+            urlFields.get(i).setText(address);
+            prefs.edit().putString("url_" + i, address).apply();
+            webViews.get(i).loadUrl(address);
+        }
+    }
+
+    private void saveAllUrls() {
+        if (prefs == null) return;
+
+        for (int i = 0; i < urlFields.size(); i++) {
+            prefs.edit().putString(
+                    "url_" + i,
+                    urlFields.get(i).getText().toString()
+            ).apply();
+        }
+    }
+
+    private void showFullScreen(int index) {
+        if (index < 0 || index >= webViews.size()) return;
+
+        WebView selected = webViews.get(index);
+
+        root.removeAllViews();
+
+        Button back = new Button(this);
+        back.setText("Back to Grid");
+        back.setOnClickListener(v -> {
+            ViewGroup parent = (ViewGroup) selected.getParent();
+            if (parent != null) parent.removeView(selected);
+
+            buildInterface();
+            createSites();
+
+            String address = prefs.getString("url_" + index, "");
+            if (!address.isEmpty()) {
+                webViews.get(index).loadUrl(address);
+            }
+        });
+
+        root.addView(back);
+        root.addView(selected, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+
+        setContentView(root);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        saveAllUrls();
+
+        for (WebView web : webViews) {
+            web.onPause();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        for (WebView web : webViews) {
+            web.onResume();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        saveAllUrls();
+
+        for (WebView web : webViews) {
+            web.stopLoading();
+            web.destroy();
+        }
+
+        webViews.clear();
+        super.onDestroy();
+    }
+}

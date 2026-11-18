@@ -20,9 +20,14 @@ public class MainActivity extends Activity {
 
     private final ArrayList<WebView> webViews = new ArrayList<>();
     private final ArrayList<EditText> urlFields = new ArrayList<>();
+    private final ArrayList<LinearLayout> siteCells = new ArrayList<>();
 
     private LinearLayout root;
     private GridLayout grid;
+    private ScrollView gridScroll;
+    private int normalCellWidth;
+    private int normalCellHeight;
+    private Button fullBackButton;
     private EditText bulkUrl;
     private Spinner countSpinner;
     private SharedPreferences prefs;
@@ -123,6 +128,7 @@ public class MainActivity extends Activity {
         root.addView(actions);
 
         ScrollView scroll = new ScrollView(this);
+        gridScroll = scroll;
         grid = new GridLayout(this);
         grid.setColumnCount(4);
         scroll.addView(grid);
@@ -140,11 +146,14 @@ public class MainActivity extends Activity {
         }
 
         webViews.clear();
+        siteCells.clear();
         urlFields.clear();
         grid.removeAllViews();
 
         int width = getResources().getDisplayMetrics().widthPixels / 4 - 8;
         int height = (int)(width * 1.25f);
+        normalCellWidth = width;
+        normalCellHeight = height;
 
         for (int i = 0; i < siteCount; i++) {
             final int index = i;
@@ -153,6 +162,7 @@ public class MainActivity extends Activity {
             cell.setOrientation(LinearLayout.VERTICAL);
             cell.setPadding(2, 2, 2, 2);
             cell.setBackgroundColor(Color.WHITE);
+            siteCells.add(cell);
 
             TextView label = new TextView(this);
             label.setText("Site " + (i + 1));
@@ -252,52 +262,78 @@ public class MainActivity extends Activity {
 
     private void showFull(int index) {
         if (index < 0 || index >= webViews.size()) return;
+        if (fullScreenIndex >= 0) return;
 
         fullScreenIndex = index;
-        WebView selected = webViews.get(index);
 
-        fullscreenParent = (ViewGroup) selected.getParent();
-        fullscreenChildIndex = fullscreenParent.indexOfChild(selected);
-
-        savedRootViews.clear();
-        for (int i = 0; i < root.getChildCount(); i++) {
-            savedRootViews.add(root.getChildAt(i));
+        for (int i = 0; i < siteCells.size(); i++) {
+            siteCells.get(i).setVisibility(i == index ? View.VISIBLE : View.GONE);
         }
 
-        fullscreenParent.removeView(selected);
-        root.removeAllViews();
+        LinearLayout cell = siteCells.get(index);
+        cell.getChildAt(0).setVisibility(View.GONE);
+        cell.getChildAt(1).setVisibility(View.GONE);
+        cell.getChildAt(3).setVisibility(View.GONE);
 
-        Button back = new Button(this);
-        back.setText("Back to Grid");
-        back.setOnClickListener(v -> returnToGrid());
+        GridLayout.LayoutParams params =
+                (GridLayout.LayoutParams) cell.getLayoutParams();
+        params.width = -1;
+        params.height = getResources().getDisplayMetrics().heightPixels;
+        params.setMargins(0, 0, 0, 0);
+        cell.setLayoutParams(params);
 
-        root.addView(back);
-        root.addView(selected, new LinearLayout.LayoutParams(-1, 0, 1));
-        setContentView(root);
+        WebView web = webViews.get(index);
+        web.setLayoutParams(new LinearLayout.LayoutParams(-1, -1));
+
+        grid.setColumnCount(1);
+
+        for (int i = 0; i < root.getChildCount(); i++) {
+            View child = root.getChildAt(i);
+            if (child != gridScroll) child.setVisibility(View.GONE);
+        }
+
+        fullBackButton = new Button(this);
+        fullBackButton.setText("Back to Grid");
+        fullBackButton.setOnClickListener(v -> returnToGrid());
+        root.addView(fullBackButton, 0);
     }
 
     private void returnToGrid() {
         if (fullScreenIndex < 0) return;
 
-        WebView selected = webViews.get(fullScreenIndex);
-        ViewGroup parent = (ViewGroup) selected.getParent();
-        if (parent != null) parent.removeView(selected);
+        int index = fullScreenIndex;
+        LinearLayout cell = siteCells.get(index);
+        WebView web = webViews.get(index);
 
-        fullscreenParent.addView(selected, fullscreenChildIndex,
-                new LinearLayout.LayoutParams(-1, 0, 1));
-
-        root.removeAllViews();
-        for (View view : savedRootViews) {
-            if (view.getParent() instanceof ViewGroup) {
-                ((ViewGroup) view.getParent()).removeView(view);
-            }
-            root.addView(view);
+        if (fullBackButton != null) {
+            root.removeView(fullBackButton);
+            fullBackButton = null;
         }
 
-        savedRootViews.clear();
+        cell.getChildAt(0).setVisibility(View.VISIBLE);
+        cell.getChildAt(1).setVisibility(View.VISIBLE);
+        cell.getChildAt(3).setVisibility(View.VISIBLE);
+
+        web.setLayoutParams(new LinearLayout.LayoutParams(-1, 0, 1));
+
+        GridLayout.LayoutParams params =
+                (GridLayout.LayoutParams) cell.getLayoutParams();
+        params.width = normalCellWidth;
+        params.height = normalCellHeight;
+        params.setMargins(2, 2, 2, 2);
+        cell.setLayoutParams(params);
+
+        for (LinearLayout siteCell : siteCells) {
+            siteCell.setVisibility(View.VISIBLE);
+        }
+
+        grid.setColumnCount(4);
+
+        for (int i = 0; i < root.getChildCount(); i++) {
+            root.getChildAt(i).setVisibility(View.VISIBLE);
+        }
+
         fullScreenIndex = -1;
-        fullscreenParent = null;
-        setContentView(root);
     }
 
     @Override
@@ -330,6 +366,7 @@ public class MainActivity extends Activity {
             web.destroy();
         }
         webViews.clear();
+        siteCells.clear();
         super.onDestroy();
     }
 }

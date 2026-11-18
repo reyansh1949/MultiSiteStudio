@@ -50,7 +50,7 @@ public class MainActivity extends Activity {
         super.onCreate(state);
 
         prefs = getSharedPreferences("multisite_data", MODE_PRIVATE);
-        siteCount = prefs.getInt("site_count", 4);
+        siteCount = Math.max(1, Math.min(100, prefs.getInt("site_count", 4)));
 
         profilesSupported = WebViewFeature.isFeatureSupported(
                 WebViewFeature.MULTI_PROFILE);
@@ -87,8 +87,8 @@ public class MainActivity extends Activity {
         row.addView(label);
 
         countSpinner = new Spinner(this);
-        String[] values = new String[20];
-        for (int i = 0; i < 20; i++) values[i] = String.valueOf(i + 1);
+        String[] values = new String[100];
+        for (int i = 0; i < 100; i++) values[i] = String.valueOf(i + 1);
 
         countSpinner.setAdapter(new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_dropdown_item, values));
@@ -141,7 +141,7 @@ public class MainActivity extends Activity {
         ScrollView scroll = new ScrollView(this);
         gridScroll = scroll;
         grid = new GridLayout(this);
-        grid.setColumnCount(4);
+        grid.setColumnCount(1);
         scroll.addView(grid);
 
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -149,6 +149,15 @@ public class MainActivity extends Activity {
     }
 
     private void createSites() {
+        if (!profilesSupported) {
+            new android.app.AlertDialog.Builder(this)
+                .setTitle("Separate Sessions Not Supported")
+                .setMessage("Your Android System WebView does not support isolated website profiles. Websites will not be opened because shared login sessions are not allowed.")
+                .setPositiveButton("OK", null)
+                .show();
+            return;
+        }
+
         saveUrls();
 
         for (WebView web : webViews) {
@@ -161,8 +170,8 @@ public class MainActivity extends Activity {
         urlFields.clear();
         grid.removeAllViews();
 
-        int width = getResources().getDisplayMetrics().widthPixels / 4 - 8;
-        int height = (int)(width * 1.25f);
+        int width = getResources().getDisplayMetrics().widthPixels - 14;
+        int height = (int)(getResources().getDisplayMetrics().density * 480);
         normalCellWidth = width;
         normalCellHeight = height;
 
@@ -194,7 +203,22 @@ public class MainActivity extends Activity {
                 try {
                     WebViewCompat.setProfile(web, "site_" + (i + 1));
                 } catch (Exception e) {
-                    Toast.makeText(this, "Profile setup failed", Toast.LENGTH_LONG).show();
+                    web.destroy();
+
+                    for (WebView existing : webViews) {
+                        existing.stopLoading();
+                        existing.destroy();
+                    }
+
+                    webViews.clear();
+                    siteCells.clear();
+                    urlFields.clear();
+                    grid.removeAllViews();
+
+                    Toast.makeText(this,
+                            "Profile setup failed. All sites stopped to protect session isolation.",
+                            Toast.LENGTH_LONG).show();
+                    return;
                 }
             }
 
@@ -300,7 +324,7 @@ public class MainActivity extends Activity {
         }
 
         fullBackButton = new Button(this);
-        fullBackButton.setText("Back to Grid");
+        fullBackButton.setText("Back to Equal View");
         fullBackButton.setOnClickListener(v -> returnToGrid());
 
         fullscreenContainer = new FrameLayout(this);

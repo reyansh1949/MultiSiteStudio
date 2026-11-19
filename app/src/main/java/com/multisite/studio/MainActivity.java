@@ -41,6 +41,9 @@ public class MainActivity extends Activity {
     private int savedWebChildIndex;
     private EditText bulkUrl;
     private Spinner countSpinner;
+    private LinearLayout soundControlsContainer;
+    private boolean muteAll = false;
+    private final ArrayList<Boolean> siteMuteStates = new ArrayList<>();
     private EditText jumpNumber;
     private SharedPreferences prefs;
     private int siteCount = 4;
@@ -202,6 +205,7 @@ public class MainActivity extends Activity {
                     siteCount = count;
                     prefs.edit().putInt("site_count", siteCount).apply();
                     createSites();
+                    buildSoundControls();
                 }
             }
             @Override
@@ -232,6 +236,7 @@ public class MainActivity extends Activity {
         row.addView(jumpButton, new LinearLayout.LayoutParams(-2, -2));
 
         settingsLayout.addView(row);
+        buildSoundControls();
 
         TextView title = new TextView(this);
         title.setText("MULTISITE");
@@ -410,12 +415,19 @@ public class MainActivity extends Activity {
             }
 
             web.getSettings().setJavaScriptEnabled(true);
+            web.getSettings().setMediaPlaybackRequiresUserGesture(false);
             web.getSettings().setDomStorageEnabled(true);
             web.getSettings().setSupportZoom(true);
             web.getSettings().setBuiltInZoomControls(true);
             web.getSettings().setDisplayZoomControls(false);
 
-            web.setWebViewClient(new WebViewClient());
+            web.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    super.onPageFinished(view, url);
+                    applyMuteToWebView(view, index);
+                }
+            });
             webViews.add(web);
 
             cell.addView(web, new LinearLayout.LayoutParams(-1, videoHeight));
@@ -517,7 +529,7 @@ public class MainActivity extends Activity {
                     "iframe{display:block;width:100%;height:100%;border:0;}" +
                     "</style></head><body>" +
                     "<iframe src='https://www.youtube.com/embed/" + videoId +
-                    "?playsinline=1&rel=0&controls=1&origin=https://com.multisite.studio' " +
+                    "?autoplay=1&mute=1&playsinline=1&rel=0&controls=1&enablejsapi=1&origin=https://com.multisite.studio' " +
                     "referrerpolicy='strict-origin' " +
                     "allow='autoplay; encrypted-media; picture-in-picture; fullscreen' " +
                     "allowfullscreen></iframe>" +
@@ -533,6 +545,151 @@ public class MainActivity extends Activity {
         } else {
             web.loadUrl(address);
         }
+    }
+
+
+    private void buildSoundControls() {
+        if (soundControlsContainer != null) {
+            settingsLayout.removeView(soundControlsContainer);
+        }
+
+        soundControlsContainer = new LinearLayout(this);
+        soundControlsContainer.setOrientation(LinearLayout.VERTICAL);
+        soundControlsContainer.setPadding(dp(8), dp(8), dp(8), dp(5));
+        soundControlsContainer.setBackground(
+                rounded(JJK_CARD, JJK_PURPLE, 10));
+
+        TextView heading = new TextView(this);
+        heading.setText("SOUND CONTROL");
+        heading.setTextColor(JJK_PURPLE);
+        heading.setTextSize(15);
+        heading.setTypeface(null, android.graphics.Typeface.BOLD);
+        heading.setPadding(dp(5), dp(3), dp(5), dp(8));
+        soundControlsContainer.addView(heading);
+
+        muteAll = prefs.getBoolean("mute_all", false);
+
+        Switch allSwitch = new Switch(this);
+        allSwitch.setText("Mute All Websites");
+        allSwitch.setTextColor(JJK_TEXT);
+        allSwitch.setTextSize(13);
+        allSwitch.setChecked(muteAll);
+
+        allSwitch.setOnCheckedChangeListener((button, checked) -> {
+            muteAll = checked;
+            prefs.edit().putBoolean("mute_all", checked).apply();
+            applyMuteToAllWebViews();
+        });
+
+        soundControlsContainer.addView(allSwitch);
+
+        TextView individualHeading = new TextView(this);
+        individualHeading.setText("Individual Website Sound");
+        individualHeading.setTextColor(JJK_MUTED);
+        individualHeading.setTextSize(12);
+        individualHeading.setPadding(dp(5), dp(8), dp(5), dp(5));
+        soundControlsContainer.addView(individualHeading);
+
+        ScrollView listScroll = new ScrollView(this);
+        LinearLayout.LayoutParams scrollParams =
+                new LinearLayout.LayoutParams(-1, dp(220));
+        listScroll.setLayoutParams(scrollParams);
+
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        list.setPadding(dp(5), dp(2), dp(5), dp(2));
+
+        siteMuteStates.clear();
+
+        for (int i = 0; i < siteCount; i++) {
+            final int index = i;
+
+            boolean savedMute = prefs.getBoolean("mute_site_" + i, false);
+            siteMuteStates.add(savedMute);
+
+            Switch siteSwitch = new Switch(this);
+            siteSwitch.setText("Site " + (i + 1) + " Mute");
+            siteSwitch.setTextColor(JJK_TEXT);
+            siteSwitch.setTextSize(12);
+            siteSwitch.setPadding(dp(3), dp(3), dp(3), dp(3));
+            siteSwitch.setChecked(savedMute);
+
+            siteSwitch.setOnCheckedChangeListener((button, checked) -> {
+                siteMuteStates.set(index, checked);
+                prefs.edit().putBoolean("mute_site_" + index, checked).apply();
+
+                if (index < webViews.size()) {
+                    applyMuteToWebView(webViews.get(index), index);
+                }
+            });
+
+            list.addView(siteSwitch);
+        }
+
+        listScroll.addView(list);
+        soundControlsContainer.addView(listScroll);
+
+        settingsLayout.addView(soundControlsContainer);
+    }
+
+    private void applyMuteToAllWebViews() {
+        for (int i = 0; i < webViews.size(); i++) {
+            applyMuteToWebView(webViews.get(i), i);
+        }
+    }
+
+    private void applyMuteToWebView(WebView web, int index) {
+        if (web == null) return;
+
+        boolean individualMute =
+                index < siteMuteStates.size() &&
+                siteMuteStates.get(index);
+
+        boolean shouldMute = muteAll || individualMute;
+
+        String script =
+                "(function() {" +
+                "var mute = " + shouldMute + ";" +
+                "window.__multiSiteMute = mute;" +
+                "function applyMedia() {" +
+                " var m = window.__multiSiteMute;" +
+                " document.querySelectorAll('audio,video').forEach(function(el) {" +
+                "   el.muted = m;" +
+                " });" +
+                "}" +
+                "applyMedia();" +
+                "if (window.__multiSiteObserver) {" +
+                " window.__multiSiteObserver.disconnect();" +
+                "}" +
+                "if (document.documentElement) {" +
+                " window.__multiSiteObserver = new MutationObserver(applyMedia);" +
+                " window.__multiSiteObserver.observe(document.documentElement," +
+                " {childList:true,subtree:true});" +
+                "}" +
+                "document.addEventListener('play', applyMedia, true);" +
+                "if (window.__multiSiteYtTimer) {" +
+                " clearInterval(window.__multiSiteYtTimer);" +
+                "}" +
+                "var frames = document.querySelectorAll(" +
+                " 'iframe[src*=\"youtube.com/embed\"]');" +
+                "if (frames.length) {" +
+                " var tries = 0;" +
+                " window.__multiSiteYtTimer = setInterval(function() {" +
+                "  var command = window.__multiSiteMute ? 'mute' : 'unMute';" +
+                "  frames.forEach(function(frame) {" +
+                "   try {" +
+                "    frame.contentWindow.postMessage(JSON.stringify({" +
+                "     event:'command',func:command,args:[]" +
+                "    }), '*');" +
+                "   } catch(e) {}" +
+                "  });" +
+                "  tries++;" +
+                "  if (tries >= 20) clearInterval(window.__multiSiteYtTimer);" +
+                " }, 500);" +
+                "}" +
+                "})();";
+
+        web.evaluateJavascript(script, null);
     }
 
     private void openBulk() {

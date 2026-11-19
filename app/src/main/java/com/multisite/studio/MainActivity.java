@@ -10,6 +10,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.*;
 import android.content.SharedPreferences;
+import android.text.InputType;
 
 import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
@@ -36,6 +37,7 @@ public class MainActivity extends Activity {
     private int savedWebChildIndex;
     private EditText bulkUrl;
     private Spinner countSpinner;
+    private EditText jumpNumber;
     private SharedPreferences prefs;
     private int siteCount = 4;
     private boolean profilesSupported = false;
@@ -115,6 +117,25 @@ public class MainActivity extends Activity {
         });
 
         row.addView(countSpinner);
+
+        TextView jumpLabel = new TextView(this);
+        jumpLabel.setText("  Jump to ");
+        row.addView(jumpLabel);
+
+        jumpNumber = new EditText(this);
+        jumpNumber.setSingleLine(true);
+        jumpNumber.setTextSize(14);
+        jumpNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
+        jumpNumber.setHint("#");
+        int jumpWidth = (int) (52 * getResources().getDisplayMetrics().density);
+        row.addView(jumpNumber, new LinearLayout.LayoutParams(jumpWidth, -2));
+
+        Button jumpButton = new Button(this);
+        jumpButton.setText("GO");
+        jumpButton.setTextSize(10);
+        jumpButton.setOnClickListener(v -> jumpToSite());
+        row.addView(jumpButton, new LinearLayout.LayoutParams(-2, -2));
+
         root.addView(row);
 
         bulkUrl = new EditText(this);
@@ -146,6 +167,35 @@ public class MainActivity extends Activity {
 
         root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(root);
+    }
+
+    private void jumpToSite() {
+        String value = jumpNumber.getText().toString().trim();
+
+        if (value.isEmpty()) {
+            Toast.makeText(this, "Enter website number", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int number;
+        try {
+            number = Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid website number", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (number < 1 || number > siteCount) {
+            Toast.makeText(this, "Enter a number from 1 to " + siteCount,
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int index = number - 1;
+        if (index < siteCells.size()) {
+            gridScroll.post(() -> gridScroll.smoothScrollTo(
+                    0, siteCells.get(index).getTop()));
+        }
     }
 
     private void createSites() {

@@ -65,7 +65,13 @@ public class MainActivity extends Activity {
     private void buildInterface() {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(5, 5, 5, 5);
+        int statusBarHeight = 0;
+        int statusBarId = getResources().getIdentifier(
+                "status_bar_height", "dimen", "android");
+        if (statusBarId > 0) {
+            statusBarHeight = getResources().getDimensionPixelSize(statusBarId);
+        }
+        root.setPadding(5, 5 + statusBarHeight, 5, 5);
 
         TextView title = new TextView(this);
         title.setText("MULTISITE");

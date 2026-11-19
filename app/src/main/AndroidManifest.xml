@@ -4,7 +4,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="MultiSite Studio"
+        android:label="MultiSite" android:icon="@drawable/multisite_logo"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="true">
 

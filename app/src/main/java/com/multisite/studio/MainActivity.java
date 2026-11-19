@@ -309,7 +309,7 @@ public class MainActivity extends Activity {
 
             GridLayout.LayoutParams params = new GridLayout.LayoutParams();
             params.width = width;
-            params.height = height;
+            params.height = normalCellHeight;
             params.setMargins(2, 2, 2, 2);
             grid.addView(cell, params);
         }

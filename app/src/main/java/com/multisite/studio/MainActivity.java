@@ -437,17 +437,11 @@ public class MainActivity extends Activity {
             root.getChildAt(i).setVisibility(View.GONE);
         }
 
-        fullBackButton = new Button(this);
-        fullBackButton.setText("");
-        fullBackButton.setOnClickListener(v -> returnToGrid());
-
         fullscreenContainer = new FrameLayout(this);
         fullscreenContainer.setBackgroundColor(Color.BLACK);
         fullscreenContainer.addView(web,
                 new FrameLayout.LayoutParams(-1, -1));
 
-        root.addView(fullBackButton,
-                new LinearLayout.LayoutParams(-1, -2));
         root.addView(fullscreenContainer,
                 new LinearLayout.LayoutParams(-1, 0, 1));
     }

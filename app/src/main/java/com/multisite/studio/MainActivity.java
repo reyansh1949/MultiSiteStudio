@@ -68,19 +68,11 @@ public class MainActivity extends Activity {
         root.setPadding(5, 5, 5, 5);
 
         TextView title = new TextView(this);
-        title.setText("MULTISITE STUDIO");
+        title.setText("MULTISITE");
         title.setTextSize(21);
         title.setTextColor(Color.BLUE);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
-
-        TextView status = new TextView(this);
-        status.setText(profilesSupported
-                ? "Separate login profiles supported"
-                : "Warning: Separate login profiles not supported by this WebView");
-        status.setTextColor(profilesSupported ? Color.rgb(0,130,0) : Color.RED);
-        status.setGravity(Gravity.CENTER);
-        root.addView(status);
 
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);

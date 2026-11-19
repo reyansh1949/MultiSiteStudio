@@ -17,6 +17,7 @@ import androidx.webkit.WebViewCompat;
 import androidx.webkit.WebViewFeature;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class MainActivity extends Activity {
 
@@ -42,6 +43,7 @@ public class MainActivity extends Activity {
     private EditText bulkUrl;
     private Spinner countSpinner;
     private LinearLayout soundControlsContainer;
+    private LinearLayout proxyControlsContainer;
     private boolean muteAll = false;
     private final ArrayList<Boolean> siteMuteStates = new ArrayList<>();
     private EditText jumpNumber;
@@ -206,6 +208,7 @@ public class MainActivity extends Activity {
                     prefs.edit().putInt("site_count", siteCount).apply();
                     createSites();
                     buildSoundControls();
+                    buildProxyControls();
                 }
             }
             @Override
@@ -237,6 +240,7 @@ public class MainActivity extends Activity {
 
         settingsLayout.addView(row);
         buildSoundControls();
+        buildProxyControls();
 
         TextView title = new TextView(this);
         title.setText("MULTISITE");
@@ -690,6 +694,267 @@ public class MainActivity extends Activity {
         soundControlsContainer.addView(soundRow);
 
         settingsLayout.addView(soundControlsContainer);
+    }
+
+
+    private String proxySlotKey(String country, int slot, String field) {
+        return "proxy_" + country + "_" + slot + "_" + field;
+    }
+
+    private void buildProxyControls() {
+        if (proxyControlsContainer != null) {
+            settingsLayout.removeView(proxyControlsContainer);
+        }
+
+        proxyControlsContainer = new LinearLayout(this);
+        proxyControlsContainer.setOrientation(LinearLayout.VERTICAL);
+        proxyControlsContainer.setPadding(dp(10), dp(10), dp(10), dp(10));
+        proxyControlsContainer.setBackground(
+                rounded(JJK_CARD, JJK_PURPLE, 10));
+
+        TextView heading = new TextView(this);
+        heading.setText("COUNTRY PROXY MANAGER");
+        heading.setTextColor(JJK_PURPLE);
+        heading.setTextSize(15);
+        heading.setTypeface(null, android.graphics.Typeface.BOLD);
+        proxyControlsContainer.addView(heading);
+
+        TextView info = new TextView(this);
+        info.setText("10 proxy slots per country | Manual IP:PORT");
+        info.setTextColor(JJK_MUTED);
+        info.setTextSize(11);
+        info.setPadding(0, dp(5), 0, dp(10));
+        proxyControlsContainer.addView(info);
+
+        ArrayList<String> sites = new ArrayList<>();
+        for (int i = 0; i < siteCount; i++) {
+            sites.add("Website " + (i + 1));
+        }
+
+        Spinner siteSpinner = new Spinner(this);
+        siteSpinner.setAdapter(new ArrayAdapter<String>(
+                this, android.R.layout.simple_spinner_dropdown_item, sites));
+        proxyControlsContainer.addView(siteSpinner);
+
+        String[] codes = Locale.getISOCountries();
+        ArrayList<String> countryCodes = new ArrayList<>();
+        ArrayList<String> countryNames = new ArrayList<>();
+
+        for (String code : codes) {
+            Locale locale = new Locale("", code);
+            countryCodes.add(code);
+            countryNames.add(locale.getDisplayCountry(Locale.ENGLISH));
+        }
+
+        Spinner countrySpinner = new Spinner(this);
+        countrySpinner.setAdapter(new ArrayAdapter<String>(
+                this, android.R.layout.simple_spinner_dropdown_item,
+                countryNames));
+        proxyControlsContainer.addView(countrySpinner);
+
+        ArrayList<String> slots = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            slots.add("Proxy Slot " + i);
+        }
+
+        Spinner slotSpinner = new Spinner(this);
+        slotSpinner.setAdapter(new ArrayAdapter<String>(
+                this, android.R.layout.simple_spinner_dropdown_item, slots));
+        proxyControlsContainer.addView(slotSpinner);
+
+        TextView ipLabel = new TextView(this);
+        ipLabel.setText("Proxy IP:PORT");
+        ipLabel.setTextColor(JJK_TEXT);
+        proxyControlsContainer.addView(ipLabel);
+
+        EditText endpoint = new EditText(this);
+        endpoint.setSingleLine(true);
+        endpoint.setHint("Example: 192.0.2.10:8080");
+        endpoint.setTextSize(13);
+        styleEditText(endpoint);
+        proxyControlsContainer.addView(endpoint);
+
+        TextView userLabel = new TextView(this);
+        userLabel.setText("Username (optional)");
+        userLabel.setTextColor(JJK_TEXT);
+        proxyControlsContainer.addView(userLabel);
+
+        EditText username = new EditText(this);
+        username.setSingleLine(true);
+        username.setHint("Proxy username");
+        username.setTextSize(13);
+        styleEditText(username);
+        proxyControlsContainer.addView(username);
+
+        TextView passLabel = new TextView(this);
+        passLabel.setText("Password (optional)");
+        passLabel.setTextColor(JJK_TEXT);
+        proxyControlsContainer.addView(passLabel);
+
+        EditText password = new EditText(this);
+        password.setSingleLine(true);
+        password.setHint("Proxy password");
+        password.setInputType(
+                InputType.TYPE_CLASS_TEXT |
+                InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        password.setTextSize(13);
+        styleEditText(password);
+        proxyControlsContainer.addView(password);
+
+        Runnable loadSlot = () -> {
+            int ci = countrySpinner.getSelectedItemPosition();
+            int si = slotSpinner.getSelectedItemPosition();
+
+            if (ci < 0 || ci >= countryCodes.size()) return;
+
+            String code = countryCodes.get(ci);
+            endpoint.setText(prefs.getString(
+                    proxySlotKey(code, si, "endpoint"), ""));
+            username.setText(prefs.getString(
+                    proxySlotKey(code, si, "username"), ""));
+            password.setText(prefs.getString(
+                    proxySlotKey(code, si, "password"), ""));
+        };
+
+        int indiaIndex = countryCodes.indexOf("IN");
+        if (indiaIndex >= 0) countrySpinner.setSelection(indiaIndex);
+
+        countrySpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent,
+                    View view, int position, long id) {
+                loadSlot.run();
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        slotSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent,
+                    View view, int position, long id) {
+                loadSlot.run();
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        siteSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent,
+                    View view, int position, long id) {
+                String assignedCountry = prefs.getString(
+                        "proxy_site_country_" + position, "IN");
+                int ci = countryCodes.indexOf(assignedCountry);
+                countrySpinner.setSelection(ci >= 0 ? ci : 0);
+
+                int assignedSlot = prefs.getInt(
+                        "proxy_site_slot_" + position, 0);
+                slotSpinner.setSelection(
+                        Math.max(0, Math.min(9, assignedSlot)));
+                loadSlot.run();
+            }
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {}
+        });
+
+        Button saveButton = new Button(this);
+        saveButton.setText("Save Country Proxy Slot");
+        styleButton(saveButton, JJK_PURPLE);
+
+        saveButton.setOnClickListener(v -> {
+            int ci = countrySpinner.getSelectedItemPosition();
+            int si = slotSpinner.getSelectedItemPosition();
+
+            if (ci < 0 || ci >= countryCodes.size()) return;
+
+            String value = endpoint.getText().toString().trim();
+
+            if (!value.isEmpty() && !value.matches(
+                    "^[a-zA-Z0-9.-]+:[0-9]{1,5}$")) {
+                Toast.makeText(this,
+                        "Enter valid IP:PORT or leave empty",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            if (!value.isEmpty()) {
+                try {
+                    int port = Integer.parseInt(
+                            value.substring(value.lastIndexOf(':') + 1));
+                    if (port < 1 || port > 65535) {
+                        throw new NumberFormatException();
+                    }
+                } catch (Exception e) {
+                    Toast.makeText(this, "Invalid proxy port",
+                            Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
+            String code = countryCodes.get(ci);
+
+            prefs.edit()
+                    .putString(proxySlotKey(code, si, "endpoint"), value)
+                    .putString(proxySlotKey(code, si, "username"),
+                            username.getText().toString().trim())
+                    .putString(proxySlotKey(code, si, "password"),
+                            password.getText().toString())
+                    .apply();
+
+            Toast.makeText(this, "Proxy slot saved",
+                    Toast.LENGTH_SHORT).show();
+        });
+
+        proxyControlsContainer.addView(saveButton);
+
+        Button assignButton = new Button(this);
+        assignButton.setText("Assign Proxy to Selected Website");
+        styleButton(assignButton, JJK_SURFACE);
+
+        assignButton.setOnClickListener(v -> {
+            int site = siteSpinner.getSelectedItemPosition();
+            int ci = countrySpinner.getSelectedItemPosition();
+            int si = slotSpinner.getSelectedItemPosition();
+
+            if (site < 0 || ci < 0 || ci >= countryCodes.size()) return;
+
+            String code = countryCodes.get(ci);
+            String savedEndpoint = prefs.getString(
+                    proxySlotKey(code, si, "endpoint"), "");
+
+            if (savedEndpoint.isEmpty()) {
+                Toast.makeText(this,
+                        "Save a proxy in this slot first",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            prefs.edit()
+                    .putString("proxy_site_country_" + site, code)
+                    .putInt("proxy_site_slot_" + site, si)
+                    .apply();
+
+            Toast.makeText(this,
+                    "Proxy assigned to Website " + (site + 1),
+                    Toast.LENGTH_SHORT).show();
+        });
+
+        proxyControlsContainer.addView(assignButton);
+
+        TextView note = new TextView(this);
+        note.setText(
+                "Saved settings only. Proxy routing is not active yet. " +
+                "Use trusted proxy providers; empty slots are not working proxies.");
+        note.setTextColor(JJK_MUTED);
+        note.setTextSize(11);
+        note.setPadding(0, dp(8), 0, 0);
+        proxyControlsContainer.addView(note);
+
+        settingsLayout.addView(proxyControlsContainer);
     }
 
     private void applyMuteToAllWebViews() {

@@ -446,7 +446,7 @@ public class MainActivity extends Activity {
         }
 
         fullBackButton = new Button(this);
-        fullBackButton.setText("Back to Equal View");
+        fullBackButton.setText("");
         fullBackButton.setOnClickListener(v -> returnToGrid());
 
         fullscreenContainer = new FrameLayout(this);

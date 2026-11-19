@@ -590,44 +590,104 @@ public class MainActivity extends Activity {
         individualHeading.setPadding(dp(5), dp(8), dp(5), dp(5));
         soundControlsContainer.addView(individualHeading);
 
-        ScrollView listScroll = new ScrollView(this);
-        LinearLayout.LayoutParams scrollParams =
-                new LinearLayout.LayoutParams(-1, dp(220));
-        listScroll.setLayoutParams(scrollParams);
-
-        LinearLayout list = new LinearLayout(this);
-        list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(dp(5), dp(2), dp(5), dp(2));
-
         siteMuteStates.clear();
 
+        ArrayList<String> siteNames = new ArrayList<>();
+
         for (int i = 0; i < siteCount; i++) {
-            final int index = i;
-
-            boolean savedMute = prefs.getBoolean("mute_site_" + i, false);
-            siteMuteStates.add(savedMute);
-
-            Switch siteSwitch = new Switch(this);
-            siteSwitch.setText("Site " + (i + 1) + " Mute");
-            siteSwitch.setTextColor(JJK_TEXT);
-            siteSwitch.setTextSize(12);
-            siteSwitch.setPadding(dp(3), dp(3), dp(3), dp(3));
-            siteSwitch.setChecked(savedMute);
-
-            siteSwitch.setOnCheckedChangeListener((button, checked) -> {
-                siteMuteStates.set(index, checked);
-                prefs.edit().putBoolean("mute_site_" + index, checked).apply();
-
-                if (index < webViews.size()) {
-                    applyMuteToWebView(webViews.get(index), index);
-                }
-            });
-
-            list.addView(siteSwitch);
+            siteNames.add("Website " + (i + 1));
+            siteMuteStates.add(
+                    prefs.getBoolean("mute_site_" + i, false));
         }
 
-        listScroll.addView(list);
-        soundControlsContainer.addView(listScroll);
+        LinearLayout soundRow = new LinearLayout(this);
+        soundRow.setOrientation(LinearLayout.HORIZONTAL);
+        soundRow.setGravity(Gravity.CENTER_VERTICAL);
+        soundRow.setPadding(dp(5), dp(5), dp(5), dp(5));
+
+        Spinner siteSpinner = new Spinner(this);
+
+        ArrayAdapter<String> soundAdapter =
+                new ArrayAdapter<>(
+                        this,
+                        android.R.layout.simple_spinner_item,
+                        siteNames
+                );
+
+        soundAdapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item);
+
+        siteSpinner.setAdapter(soundAdapter);
+
+        LinearLayout.LayoutParams spinnerParams =
+                new LinearLayout.LayoutParams(0, dp(48), 1f);
+
+        soundRow.addView(siteSpinner, spinnerParams);
+
+        Button muteButton = new Button(this);
+        muteButton.setTextColor(JJK_TEXT);
+        muteButton.setTextSize(12);
+        muteButton.setAllCaps(false);
+        muteButton.setPadding(dp(12), 0, dp(12), 0);
+        muteButton.setBackground(
+                rounded(JJK_CARD, JJK_PURPLE, 8));
+
+        LinearLayout.LayoutParams buttonParams =
+                new LinearLayout.LayoutParams(
+                        -2, dp(42));
+
+        buttonParams.setMargins(dp(8), 0, 0, 0);
+        soundRow.addView(muteButton, buttonParams);
+
+        final int[] selectedSite = {0};
+
+        muteButton.setText(
+                siteMuteStates.get(0) ? "Unmute" : "Mute");
+
+        siteSpinner.setOnItemSelectedListener(
+                new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(
+                            AdapterView<?> parent,
+                            View view,
+                            int position,
+                            long id) {
+
+                        selectedSite[0] = position;
+
+                        muteButton.setText(
+                                siteMuteStates.get(position)
+                                        ? "Unmute" : "Mute");
+                    }
+
+                    @Override
+                    public void onNothingSelected(
+                            AdapterView<?> parent) {
+                    }
+                });
+
+        muteButton.setOnClickListener(v -> {
+            int index = selectedSite[0];
+
+            boolean newMuteState =
+                    !siteMuteStates.get(index);
+
+            siteMuteStates.set(index, newMuteState);
+
+            prefs.edit()
+                    .putBoolean("mute_site_" + index, newMuteState)
+                    .apply();
+
+            muteButton.setText(
+                    newMuteState ? "Unmute" : "Mute");
+
+            if (index < webViews.size()) {
+                applyMuteToWebView(
+                        webViews.get(index), index);
+            }
+        });
+
+        soundControlsContainer.addView(soundRow);
 
         settingsLayout.addView(soundControlsContainer);
     }

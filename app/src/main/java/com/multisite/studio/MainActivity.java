@@ -1,6 +1,7 @@
 package com.multisite.studio;
 
 import android.app.Activity;
+import android.net.Uri;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.view.Gravity;
@@ -221,9 +222,10 @@ public class MainActivity extends Activity {
         grid.removeAllViews();
 
         int width = getResources().getDisplayMetrics().widthPixels - 14;
-        int height = (int)(getResources().getDisplayMetrics().density * 480);
+        int videoHeight = (int)(width * 9f / 16f);
+        int extraHeight = (int)(getResources().getDisplayMetrics().density * 120);
         normalCellWidth = width;
-        normalCellHeight = height;
+        normalCellHeight = videoHeight + extraHeight;
 
         for (int i = 0; i < siteCount; i++) {
             final int index = i;
@@ -281,7 +283,7 @@ public class MainActivity extends Activity {
             web.setWebViewClient(new WebViewClient());
             webViews.add(web);
 
-            cell.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
+            cell.addView(web, new LinearLayout.LayoutParams(-1, videoHeight));
 
             LinearLayout buttons = new LinearLayout(this);
 
@@ -292,7 +294,7 @@ public class MainActivity extends Activity {
                 String address = normalize(urlFields.get(index).getText().toString());
                 if (address != null) {
                     prefs.edit().putString("url_" + index, address).apply();
-                    webViews.get(index).loadUrl(address);
+                    loadWebsite(webViews.get(index), address);
                 }
             });
 
@@ -326,6 +328,59 @@ public class MainActivity extends Activity {
         return address;
     }
 
+    private String getYouTubeVideoId(String address) {
+        try {
+            Uri uri = Uri.parse(address);
+            String host = uri.getHost();
+
+            if (host == null) return null;
+            host = host.toLowerCase();
+
+            if (host.equals("youtu.be")) {
+                if (!uri.getPathSegments().isEmpty())
+                    return uri.getPathSegments().get(0);
+            }
+
+            if (host.equals("youtube.com") ||
+                    host.endsWith(".youtube.com")) {
+
+                String videoId = uri.getQueryParameter("v");
+                if (videoId != null && !videoId.isEmpty())
+                    return videoId;
+
+                java.util.List<String> parts = uri.getPathSegments();
+
+                if (parts.size() >= 2) {
+                    String type = parts.get(0);
+
+                    if (type.equals("shorts") ||
+                            type.equals("embed") ||
+                            type.equals("live")) {
+                        return parts.get(1);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private void loadWebsite(WebView web, String address) {
+        String videoId = getYouTubeVideoId(address);
+
+        if (videoId != null) {
+            String embedUrl =
+                    "https://www.youtube.com/embed/" + videoId
+                    + "?playsinline=1&rel=0";
+
+            web.loadUrl(embedUrl);
+        } else {
+            web.loadUrl(address);
+        }
+    }
+
     private void openBulk() {
         String address = normalize(bulkUrl.getText().toString());
         if (address == null) return;
@@ -333,7 +388,7 @@ public class MainActivity extends Activity {
         for (int i = 0; i < webViews.size(); i++) {
             urlFields.get(i).setText(address);
             prefs.edit().putString("url_" + i, address).apply();
-            webViews.get(i).loadUrl(address);
+            loadWebsite(webViews.get(i), address);
         }
     }
 

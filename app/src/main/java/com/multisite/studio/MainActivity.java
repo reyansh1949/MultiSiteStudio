@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
         super.onCreate(state);
 
         prefs = getSharedPreferences("multisite_data", MODE_PRIVATE);
-        siteCount = Math.max(1, Math.min(100, prefs.getInt("site_count", 4)));
+        siteCount = Math.max(1, Math.min(25, prefs.getInt("site_count", 4)));
 
         profilesSupported = WebViewFeature.isFeatureSupported(
                 WebViewFeature.MULTI_PROFILE);
@@ -159,8 +159,8 @@ public class MainActivity extends Activity {
         row.addView(label);
 
         countSpinner = new Spinner(this);
-        String[] values = new String[100];
-        for (int i = 0; i < 100; i++) values[i] = String.valueOf(i + 1);
+        String[] values = new String[25];
+        for (int i = 0; i < 25; i++) values[i] = String.valueOf(i + 1);
 
         ArrayAdapter<String> spinnerAdapter =
                 new ArrayAdapter<String>(

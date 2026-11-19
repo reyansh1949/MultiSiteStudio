@@ -25,6 +25,9 @@ public class MainActivity extends Activity {
     private final ArrayList<LinearLayout> siteCells = new ArrayList<>();
 
     private LinearLayout root;
+    private LinearLayout homeLayout;
+    private LinearLayout settingsLayout;
+    private boolean settingsOpen = false;
     private GridLayout grid;
     private ScrollView gridScroll;
     private int normalCellWidth;
@@ -116,14 +119,28 @@ public class MainActivity extends Activity {
         getWindow().setNavigationBarColor(JJK_BG);
         getWindow().getDecorView().setSystemUiVisibility(0);
 
-        TextView title = new TextView(this);
-        title.setText("MULTISITE");
-        title.setTextSize(21);
-        title.setTextColor(JJK_PURPLE);
-        title.setTypeface(null, android.graphics.Typeface.BOLD);
-        title.setShadowLayer(dp(12), 0, 0, JJK_PURPLE);
-        title.setGravity(Gravity.CENTER);
-        root.addView(title);
+        homeLayout = new LinearLayout(this);
+        homeLayout.setOrientation(LinearLayout.VERTICAL);
+
+        settingsLayout = new LinearLayout(this);
+        settingsLayout.setOrientation(LinearLayout.VERTICAL);
+        settingsLayout.setPadding(dp(6), dp(5), dp(6), dp(5));
+        settingsLayout.setBackgroundColor(JJK_BG);
+        settingsLayout.setVisibility(View.GONE);
+
+        TextView settingsTitle = new TextView(this);
+        settingsTitle.setText("SETTINGS");
+        settingsTitle.setTextSize(20);
+        settingsTitle.setTextColor(JJK_PURPLE);
+        settingsTitle.setTypeface(null, android.graphics.Typeface.BOLD);
+        settingsTitle.setGravity(Gravity.CENTER);
+        settingsLayout.addView(settingsTitle);
+
+        Button backHome = new Button(this);
+        backHome.setText("← Back to Home");
+        styleButton(backHome, JJK_SURFACE);
+        backHome.setOnClickListener(v -> showHomePage());
+        settingsLayout.addView(backHome);
 
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -214,13 +231,28 @@ public class MainActivity extends Activity {
         jumpButton.setOnClickListener(v -> jumpToSite());
         row.addView(jumpButton, new LinearLayout.LayoutParams(-2, -2));
 
-        root.addView(row);
+        settingsLayout.addView(row);
+
+        TextView title = new TextView(this);
+        title.setText("MULTISITE");
+        title.setTextSize(21);
+        title.setTextColor(JJK_PURPLE);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setShadowLayer(dp(12), 0, 0, JJK_PURPLE);
+        title.setGravity(Gravity.CENTER);
+        homeLayout.addView(title);
+
+        Button settingsButton = new Button(this);
+        settingsButton.setText("⚙ Settings");
+        styleButton(settingsButton, JJK_SURFACE);
+        settingsButton.setOnClickListener(v -> showSettingsPage());
+        homeLayout.addView(settingsButton);
 
         bulkUrl = new EditText(this);
         bulkUrl.setSingleLine(true);
         bulkUrl.setHint("One URL for all websites");
         styleEditText(bulkUrl);
-        root.addView(bulkUrl);
+        homeLayout.addView(bulkUrl);
 
         LinearLayout actions = new LinearLayout(this);
         actions.setPadding(0, dp(4), 0, dp(4));
@@ -239,7 +271,7 @@ public class MainActivity extends Activity {
 
         actions.addView(openAll, new LinearLayout.LayoutParams(0, -2, 1));
         actions.addView(refresh, new LinearLayout.LayoutParams(0, -2, 1));
-        root.addView(actions);
+        homeLayout.addView(actions);
 
         ScrollView scroll = new ScrollView(this);
         gridScroll = scroll;
@@ -247,8 +279,24 @@ public class MainActivity extends Activity {
         grid.setColumnCount(1);
         scroll.addView(grid);
 
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        homeLayout.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        root.addView(homeLayout, new LinearLayout.LayoutParams(-1, -1));
+        root.addView(settingsLayout, new LinearLayout.LayoutParams(-1, -1));
         setContentView(root);
+    }
+
+
+    private void showSettingsPage() {
+        if (fullScreenIndex >= 0) return;
+        settingsOpen = true;
+        homeLayout.setVisibility(View.GONE);
+        settingsLayout.setVisibility(View.VISIBLE);
+    }
+
+    private void showHomePage() {
+        settingsOpen = false;
+        settingsLayout.setVisibility(View.GONE);
+        homeLayout.setVisibility(View.VISIBLE);
     }
 
     private void jumpToSite() {
@@ -584,6 +632,8 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (fullScreenIndex >= 0) {
             returnToGrid();
+        } else if (settingsOpen) {
+            showHomePage();
         } else {
             super.onBackPressed();
         }

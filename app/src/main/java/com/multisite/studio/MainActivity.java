@@ -221,7 +221,7 @@ public class MainActivity extends Activity {
         urlFields.clear();
         grid.removeAllViews();
 
-        int width = getResources().getDisplayMetrics().widthPixels - 14;
+        int width = (getResources().getDisplayMetrics().widthPixels - 14) / 2;
         int videoHeight = (int)(width * 9f / 16f);
         int extraHeight = (int)(getResources().getDisplayMetrics().density * 120);
         normalCellWidth = width;

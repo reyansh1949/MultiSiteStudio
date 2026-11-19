@@ -221,11 +221,10 @@ public class MainActivity extends Activity {
         urlFields.clear();
         grid.removeAllViews();
 
-        int width = (getResources().getDisplayMetrics().widthPixels - 14) / 2;
-        int videoHeight = (int)(width * 9f / 16f);
-        int extraHeight = (int)(getResources().getDisplayMetrics().density * 120);
+        int width = getResources().getDisplayMetrics().widthPixels - 14;
+        int height = (int)(getResources().getDisplayMetrics().density * 480);
         normalCellWidth = width;
-        normalCellHeight = videoHeight + extraHeight;
+        normalCellHeight = height;
 
         for (int i = 0; i < siteCount; i++) {
             final int index = i;
@@ -283,7 +282,7 @@ public class MainActivity extends Activity {
             web.setWebViewClient(new WebViewClient());
             webViews.add(web);
 
-            cell.addView(web, new LinearLayout.LayoutParams(-1, videoHeight));
+            cell.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
 
             LinearLayout buttons = new LinearLayout(this);
 

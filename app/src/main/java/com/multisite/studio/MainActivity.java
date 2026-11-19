@@ -380,13 +380,14 @@ public class MainActivity extends Activity {
                     "iframe{display:block;width:100%;height:100%;border:0;}" +
                     "</style></head><body>" +
                     "<iframe src='https://www.youtube.com/embed/" + videoId +
-                    "?playsinline=1&rel=0&controls=1' " +
+                    "?playsinline=1&rel=0&controls=1&origin=https://com.multisite.studio' " +
+                    "referrerpolicy='strict-origin' " +
                     "allow='autoplay; encrypted-media; picture-in-picture; fullscreen' " +
                     "allowfullscreen></iframe>" +
                     "</body></html>";
 
             web.loadDataWithBaseURL(
-                    "https://www.youtube.com/",
+                    "https://com.multisite.studio/",
                     html,
                     "text/html",
                     "UTF-8",

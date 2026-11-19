@@ -62,6 +62,45 @@ public class MainActivity extends Activity {
         createSites();
     }
 
+
+    private static final int JJK_BG = Color.rgb(9, 10, 19);
+    private static final int JJK_CARD = Color.rgb(23, 24, 39);
+    private static final int JJK_SURFACE = Color.rgb(32, 34, 56);
+    private static final int JJK_PURPLE = Color.rgb(155, 92, 255);
+    private static final int JJK_RED = Color.rgb(229, 57, 85);
+    private static final int JJK_TEXT = Color.rgb(245, 242, 255);
+    private static final int JJK_MUTED = Color.rgb(170, 167, 188);
+
+    private int dp(float value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private android.graphics.drawable.GradientDrawable rounded(
+            int fill, int stroke, int radius) {
+        android.graphics.drawable.GradientDrawable shape =
+                new android.graphics.drawable.GradientDrawable();
+        shape.setColor(fill);
+        shape.setCornerRadius(dp(radius));
+        shape.setStroke(dp(1), stroke);
+        return shape;
+    }
+
+    private void styleButton(Button button, int color) {
+        button.setTextColor(JJK_TEXT);
+        button.setTextSize(12);
+        button.setAllCaps(false);
+        button.setMinHeight(dp(36));
+        button.setPadding(dp(10), dp(5), dp(10), dp(5));
+        button.setBackground(rounded(color, JJK_PURPLE, 10));
+    }
+
+    private void styleEditText(EditText edit) {
+        edit.setTextColor(JJK_TEXT);
+        edit.setHintTextColor(JJK_MUTED);
+        edit.setPadding(dp(9), dp(5), dp(9), dp(5));
+        edit.setBackground(rounded(JJK_SURFACE, JJK_PURPLE, 8));
+    }
+
     private void buildInterface() {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -72,27 +111,64 @@ public class MainActivity extends Activity {
             statusBarHeight = getResources().getDimensionPixelSize(statusBarId);
         }
         root.setPadding(5, 5 + statusBarHeight, 5, 5);
+        root.setBackgroundColor(JJK_BG);
+        getWindow().setStatusBarColor(JJK_BG);
+        getWindow().setNavigationBarColor(JJK_BG);
+        getWindow().getDecorView().setSystemUiVisibility(0);
 
         TextView title = new TextView(this);
         title.setText("MULTISITE");
         title.setTextSize(21);
-        title.setTextColor(Color.BLUE);
+        title.setTextColor(JJK_PURPLE);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        title.setShadowLayer(dp(12), 0, 0, JJK_PURPLE);
         title.setGravity(Gravity.CENTER);
         root.addView(title);
 
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(6), dp(5), dp(6), dp(5));
+        row.setBackground(rounded(JJK_CARD, JJK_PURPLE, 10));
 
         TextView label = new TextView(this);
         label.setText("Websites: ");
+        label.setTextColor(JJK_TEXT);
+        label.setTypeface(null, android.graphics.Typeface.BOLD);
         row.addView(label);
 
         countSpinner = new Spinner(this);
         String[] values = new String[100];
         for (int i = 0; i < 100; i++) values[i] = String.valueOf(i + 1);
 
-        countSpinner.setAdapter(new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_dropdown_item, values));
+        ArrayAdapter<String> spinnerAdapter =
+                new ArrayAdapter<String>(
+                        this, android.R.layout.simple_spinner_item, values) {
+            @Override
+            public View getView(int position, View convertView,
+                    ViewGroup parent) {
+                TextView text = (TextView) super.getView(
+                        position, convertView, parent);
+                text.setTextColor(JJK_TEXT);
+                text.setTextSize(13);
+                return text;
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView,
+                    ViewGroup parent) {
+                TextView text = (TextView) super.getDropDownView(
+                        position, convertView, parent);
+                text.setTextColor(JJK_TEXT);
+                text.setBackgroundColor(JJK_CARD);
+                text.setPadding(dp(12), dp(10), dp(12), dp(10));
+                return text;
+            }
+        };
+        spinnerAdapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item);
+        countSpinner.setAdapter(spinnerAdapter);
+        countSpinner.setBackgroundTintList(
+                android.content.res.ColorStateList.valueOf(JJK_PURPLE));
         countSpinner.setSelection(siteCount - 1);
 
         countSpinner.setOnItemSelectedListener(
@@ -119,6 +195,7 @@ public class MainActivity extends Activity {
 
         TextView jumpLabel = new TextView(this);
         jumpLabel.setText("  Jump to ");
+        jumpLabel.setTextColor(JJK_TEXT);
         row.addView(jumpLabel);
 
         jumpNumber = new EditText(this);
@@ -126,12 +203,14 @@ public class MainActivity extends Activity {
         jumpNumber.setTextSize(14);
         jumpNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
         jumpNumber.setHint("#");
+        styleEditText(jumpNumber);
         int jumpWidth = (int) (52 * getResources().getDisplayMetrics().density);
         row.addView(jumpNumber, new LinearLayout.LayoutParams(jumpWidth, -2));
 
         Button jumpButton = new Button(this);
         jumpButton.setText("GO");
         jumpButton.setTextSize(10);
+        styleButton(jumpButton, JJK_PURPLE);
         jumpButton.setOnClickListener(v -> jumpToSite());
         row.addView(jumpButton, new LinearLayout.LayoutParams(-2, -2));
 
@@ -140,16 +219,20 @@ public class MainActivity extends Activity {
         bulkUrl = new EditText(this);
         bulkUrl.setSingleLine(true);
         bulkUrl.setHint("One URL for all websites");
+        styleEditText(bulkUrl);
         root.addView(bulkUrl);
 
         LinearLayout actions = new LinearLayout(this);
+        actions.setPadding(0, dp(4), 0, dp(4));
 
         Button openAll = new Button(this);
         openAll.setText("Open All");
+        styleButton(openAll, JJK_PURPLE);
         openAll.setOnClickListener(v -> openBulk());
 
         Button refresh = new Button(this);
         refresh.setText("Refresh All");
+        styleButton(refresh, JJK_RED);
         refresh.setOnClickListener(v -> {
             for (WebView web : webViews) web.reload();
         });
@@ -230,24 +313,30 @@ public class MainActivity extends Activity {
 
             LinearLayout cell = new LinearLayout(this);
             cell.setOrientation(LinearLayout.VERTICAL);
-            cell.setPadding(2, 2, 2, 2);
-            cell.setBackgroundColor(Color.WHITE);
+            cell.setPadding(dp(5), dp(5), dp(5), dp(5));
+            cell.setBackground(rounded(JJK_CARD, JJK_PURPLE, 12));
             siteCells.add(cell);
 
             TextView label = new TextView(this);
             label.setText("Site " + (i + 1));
             label.setGravity(Gravity.CENTER);
+            label.setTextColor(JJK_PURPLE);
+            label.setTypeface(null, android.graphics.Typeface.BOLD);
+            label.setTextSize(14);
+            label.setPadding(0, dp(4), 0, dp(4));
             cell.addView(label);
 
             EditText url = new EditText(this);
             url.setSingleLine(true);
             url.setTextSize(9);
             url.setHint("URL");
+            styleEditText(url);
             url.setText(prefs.getString("url_" + i, ""));
             urlFields.add(url);
             cell.addView(url, new LinearLayout.LayoutParams(-1, 35));
 
             WebView web = new WebView(this);
+            web.setBackgroundColor(Color.BLACK);
 
             if (profilesSupported) {
                 try {
@@ -288,6 +377,7 @@ public class MainActivity extends Activity {
             Button go = new Button(this);
             go.setText("Go");
             go.setTextSize(9);
+            styleButton(go, JJK_PURPLE);
             go.setOnClickListener(v -> {
                 String address = normalize(urlFields.get(index).getText().toString());
                 if (address != null) {
@@ -299,6 +389,7 @@ public class MainActivity extends Activity {
             Button full = new Button(this);
             full.setText("Full");
             full.setTextSize(9);
+            styleButton(full, JJK_RED);
             full.setOnClickListener(v -> showFull(index));
 
             buttons.addView(go, new LinearLayout.LayoutParams(0, -2, 1));
@@ -444,7 +535,7 @@ public class MainActivity extends Activity {
         }
 
         fullscreenContainer = new FrameLayout(this);
-        fullscreenContainer.setBackgroundColor(Color.BLACK);
+        fullscreenContainer.setBackgroundColor(JJK_BG);
         fullscreenContainer.addView(web,
                 new FrameLayout.LayoutParams(-1, -1));
 

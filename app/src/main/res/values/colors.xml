@@ -1,8 +1,16 @@
 <resources>
-    <color name="primary">#1565C0</color>
-    <color name="primary_dark">#0D47A1</color>
-    <color name="accent">#00C853</color>
+    <color name="primary">#9B5CFF</color>
+    <color name="primary_dark">#5425A8</color>
+    <color name="accent">#E53955</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
-    <color name="background">#F5F7FA</color>
+    <color name="background">#090A13</color>
+
+    <color name="jjk_bg">#090A13</color>
+    <color name="jjk_card">#171827</color>
+    <color name="jjk_surface">#202238</color>
+    <color name="jjk_purple">#9B5CFF</color>
+    <color name="jjk_red">#E53955</color>
+    <color name="jjk_text">#F5F2FF</color>
+    <color name="jjk_muted">#AAA7BC</color>
 </resources>

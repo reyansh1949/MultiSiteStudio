@@ -41,7 +41,10 @@ public class MainActivity extends Activity {
     private int savedGridIndex;
     private int savedWebChildIndex;
     private EditText bulkUrl;
-    private Spinner countSpinner;
+    private Spinner startSpinner;
+    private Spinner endSpinner;
+    private int startSite = 1;
+    private int endSite = 4;
     private LinearLayout soundControlsContainer;
     private LinearLayout proxyControlsContainer;
     private boolean muteAll = false;
@@ -61,7 +64,13 @@ public class MainActivity extends Activity {
         super.onCreate(state);
 
         prefs = getSharedPreferences("multisite_data", MODE_PRIVATE);
-        siteCount = Math.max(1, Math.min(25, prefs.getInt("site_count", 4)));
+        int oldCount = Math.max(1, Math.min(25,
+                prefs.getInt("site_count", 4)));
+        startSite = Math.max(1, Math.min(25,
+                prefs.getInt("site_start", 1)));
+        endSite = Math.max(startSite, Math.min(25,
+                prefs.getInt("site_end", oldCount)));
+        siteCount = endSite - startSite + 1;
 
         profilesSupported = WebViewFeature.isFeatureSupported(
                 WebViewFeature.MULTI_PROFILE);
@@ -158,64 +167,57 @@ public class MainActivity extends Activity {
         label.setTypeface(null, android.graphics.Typeface.BOLD);
         row.addView(label);
 
-        countSpinner = new Spinner(this);
-        String[] values = new String[25];
-        for (int i = 0; i < 25; i++) values[i] = String.valueOf(i + 1);
+        TextView fromLabel = new TextView(this);
+        fromLabel.setText("From:");
+        fromLabel.setTextColor(JJK_TEXT);
+        row.addView(fromLabel);
 
-        ArrayAdapter<String> spinnerAdapter =
-                new ArrayAdapter<String>(
-                        this, android.R.layout.simple_spinner_item, values) {
-            @Override
-            public View getView(int position, View convertView,
-                    ViewGroup parent) {
-                TextView text = (TextView) super.getView(
-                        position, convertView, parent);
-                text.setTextColor(JJK_TEXT);
-                text.setTextSize(13);
-                return text;
-            }
+        String[] rangeValues = new String[25];
+        for (int i = 0; i < 25; i++) rangeValues[i] = String.valueOf(i + 1);
 
-            @Override
-            public View getDropDownView(int position, View convertView,
-                    ViewGroup parent) {
-                TextView text = (TextView) super.getDropDownView(
-                        position, convertView, parent);
-                text.setTextColor(JJK_TEXT);
-                text.setBackgroundColor(JJK_CARD);
-                text.setPadding(dp(12), dp(10), dp(12), dp(10));
-                return text;
-            }
-        };
-        spinnerAdapter.setDropDownViewResource(
+        ArrayAdapter<String> rangeAdapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, rangeValues);
+        rangeAdapter.setDropDownViewResource(
                 android.R.layout.simple_spinner_dropdown_item);
-        countSpinner.setAdapter(spinnerAdapter);
-        countSpinner.setBackgroundTintList(
-                android.content.res.ColorStateList.valueOf(JJK_PURPLE));
-        countSpinner.setSelection(siteCount - 1);
 
-        countSpinner.setOnItemSelectedListener(
+        startSpinner = new Spinner(this);
+        startSpinner.setAdapter(rangeAdapter);
+        startSpinner.setSelection(startSite - 1);
+        row.addView(startSpinner);
+
+        TextView toLabel = new TextView(this);
+        toLabel.setText(" To:");
+        toLabel.setTextColor(JJK_TEXT);
+        row.addView(toLabel);
+
+        endSpinner = new Spinner(this);
+        endSpinner.setAdapter(rangeAdapter);
+        endSpinner.setSelection(endSite - 1);
+        row.addView(endSpinner);
+
+        AdapterView.OnItemSelectedListener listener =
                 new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(android.widget.AdapterView<?> p,
-                    View v, int position, long id) {
-                int count = position + 1;
-                if (fullScreenIndex >= 0) {
-                    countSpinner.setSelection(siteCount - 1);
-                    return;
+            public void onItemSelected(AdapterView<?> parent,
+                    View view, int position, long id) {
+                int from = startSpinner.getSelectedItemPosition() + 1;
+                int to = endSpinner.getSelectedItemPosition() + 1;
+                if (from > to) {
+                    if (parent == startSpinner) {
+                        endSpinner.setSelection(from - 1);
+                        to = from;
+                    } else {
+                        startSpinner.setSelection(to - 1);
+                        from = to;
+                    }
                 }
-                if (count != siteCount) {
-                    siteCount = count;
-                    prefs.edit().putInt("site_count", siteCount).apply();
-                    createSites();
-                    buildSoundControls();
-                    buildProxyControls();
-                }
+                applyWebsiteRange(from, to);
             }
             @Override
-            public void onNothingSelected(android.widget.AdapterView<?> p) {}
-        });
-
-        row.addView(countSpinner);
+            public void onNothingSelected(AdapterView<?> parent) {}
+        };
+        startSpinner.setOnItemSelectedListener(listener);
+        endSpinner.setOnItemSelectedListener(listener);
 
         TextView jumpLabel = new TextView(this);
         jumpLabel.setText("  Jump to ");
@@ -308,6 +310,32 @@ public class MainActivity extends Activity {
         homeLayout.setVisibility(View.VISIBLE);
     }
 
+    private void applyWebsiteRange(int from, int to) {
+        if (fullScreenIndex >= 0) return;
+        if (from == startSite && to == endSite) return;
+
+        saveUrls();
+
+        startSite = from;
+        endSite = to;
+        siteCount = endSite - startSite + 1;
+
+        prefs.edit()
+                .putInt("site_start", startSite)
+                .putInt("site_end", endSite)
+                .putInt("site_count", siteCount)
+                .apply();
+
+        createSites();
+        buildSoundControls();
+        buildProxyControls();
+
+        Toast.makeText(this,
+                "Showing Website " + startSite + " to " + endSite,
+                Toast.LENGTH_SHORT).show();
+    }
+
+
     private void jumpToSite() {
         String value = jumpNumber.getText().toString().trim();
 
@@ -324,13 +352,13 @@ public class MainActivity extends Activity {
             return;
         }
 
-        if (number < 1 || number > siteCount) {
-            Toast.makeText(this, "Enter a number from 1 to " + siteCount,
-                    Toast.LENGTH_SHORT).show();
+        if (number < startSite || number > endSite) {
+            Toast.makeText(this, "Enter a number from " + startSite +
+                    " to " + endSite, Toast.LENGTH_SHORT).show();
             return;
         }
 
-        int index = number - 1;
+        int index = number - startSite;
         if (index < siteCells.size()) {
             gridScroll.post(() -> gridScroll.smoothScrollTo(
                     0, siteCells.get(index).getTop()));
@@ -346,8 +374,6 @@ public class MainActivity extends Activity {
                 .show();
             return;
         }
-
-        saveUrls();
 
         for (WebView web : webViews) {
             web.stopLoading();
@@ -367,6 +393,8 @@ public class MainActivity extends Activity {
 
         for (int i = 0; i < siteCount; i++) {
             final int index = i;
+            final int globalIndex = startSite + i - 1;
+            final int websiteNumber = globalIndex + 1;
 
             LinearLayout cell = new LinearLayout(this);
             cell.setOrientation(LinearLayout.VERTICAL);
@@ -375,7 +403,7 @@ public class MainActivity extends Activity {
             siteCells.add(cell);
 
             TextView label = new TextView(this);
-            label.setText("Site " + (i + 1));
+            label.setText("Website " + websiteNumber);
             label.setGravity(Gravity.CENTER);
             label.setTextColor(JJK_PURPLE);
             label.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -388,7 +416,7 @@ public class MainActivity extends Activity {
             url.setTextSize(9);
             url.setHint("URL");
             styleEditText(url);
-            url.setText(prefs.getString("url_" + i, ""));
+            url.setText(prefs.getString("url_" + globalIndex, ""));
             urlFields.add(url);
             cell.addView(url, new LinearLayout.LayoutParams(-1, 35));
 
@@ -397,7 +425,7 @@ public class MainActivity extends Activity {
 
             if (profilesSupported) {
                 try {
-                    WebViewCompat.setProfile(web, "site_" + (i + 1));
+                    WebViewCompat.setProfile(web, "site_" + websiteNumber);
                 } catch (Exception e) {
                     web.destroy();
 
@@ -445,7 +473,8 @@ public class MainActivity extends Activity {
             go.setOnClickListener(v -> {
                 String address = normalize(urlFields.get(index).getText().toString());
                 if (address != null) {
-                    prefs.edit().putString("url_" + index, address).apply();
+                    prefs.edit().putString(
+                            "url_" + (startSite + index - 1), address).apply();
                     loadWebsite(webViews.get(index), address);
                 }
             });
@@ -599,9 +628,10 @@ public class MainActivity extends Activity {
         ArrayList<String> siteNames = new ArrayList<>();
 
         for (int i = 0; i < siteCount; i++) {
-            siteNames.add("Website " + (i + 1));
+            int globalIndex = startSite + i - 1;
+            siteNames.add("Website " + (globalIndex + 1));
             siteMuteStates.add(
-                    prefs.getBoolean("mute_site_" + i, false));
+                    prefs.getBoolean("mute_site_" + globalIndex, false));
         }
 
         LinearLayout soundRow = new LinearLayout(this);
@@ -678,8 +708,9 @@ public class MainActivity extends Activity {
 
             siteMuteStates.set(index, newMuteState);
 
+            int globalIndex = startSite + index - 1;
             prefs.edit()
-                    .putBoolean("mute_site_" + index, newMuteState)
+                    .putBoolean("mute_site_" + globalIndex, newMuteState)
                     .apply();
 
             muteButton.setText(
@@ -728,7 +759,7 @@ public class MainActivity extends Activity {
 
         ArrayList<String> sites = new ArrayList<>();
         for (int i = 0; i < siteCount; i++) {
-            sites.add("Website " + (i + 1));
+            sites.add("Website " + (startSite + i));
         }
 
         Spinner siteSpinner = new Spinner(this);
@@ -846,13 +877,14 @@ public class MainActivity extends Activity {
             @Override
             public void onItemSelected(AdapterView<?> parent,
                     View view, int position, long id) {
+                int globalSiteIndex = startSite + position - 1;
                 String assignedCountry = prefs.getString(
-                        "proxy_site_country_" + position, "IN");
+                        "proxy_site_country_" + globalSiteIndex, "IN");
                 int ci = countryCodes.indexOf(assignedCountry);
                 countrySpinner.setSelection(ci >= 0 ? ci : 0);
 
                 int assignedSlot = prefs.getInt(
-                        "proxy_site_slot_" + position, 0);
+                        "proxy_site_slot_" + globalSiteIndex, 0);
                 slotSpinner.setSelection(
                         Math.max(0, Math.min(9, assignedSlot)));
                 loadSlot.run();
@@ -933,13 +965,14 @@ public class MainActivity extends Activity {
                 return;
             }
 
+            int globalSiteIndex = startSite + site - 1;
             prefs.edit()
-                    .putString("proxy_site_country_" + site, code)
-                    .putInt("proxy_site_slot_" + site, si)
+                    .putString("proxy_site_country_" + globalSiteIndex, code)
+                    .putInt("proxy_site_slot_" + globalSiteIndex, si)
                     .apply();
 
             Toast.makeText(this,
-                    "Proxy assigned to Website " + (site + 1),
+                    "Proxy assigned to Website " + (globalSiteIndex + 1),
                     Toast.LENGTH_SHORT).show();
         });
 
@@ -1023,7 +1056,8 @@ public class MainActivity extends Activity {
 
         for (int i = 0; i < webViews.size(); i++) {
             urlFields.get(i).setText(address);
-            prefs.edit().putString("url_" + i, address).apply();
+            prefs.edit().putString(
+                    "url_" + (startSite + i - 1), address).apply();
             loadWebsite(webViews.get(i), address);
         }
     }
@@ -1031,7 +1065,7 @@ public class MainActivity extends Activity {
     private void saveUrls() {
         if (prefs == null) return;
         for (int i = 0; i < urlFields.size(); i++) {
-            prefs.edit().putString("url_" + i,
+            prefs.edit().putString("url_" + (startSite + i - 1),
                     urlFields.get(i).getText().toString()).apply();
         }
     }

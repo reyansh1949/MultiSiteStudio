@@ -42,6 +42,7 @@ public class MainActivity extends Activity {
     private EditText bulkUrl;
     private EditText fromInput;
     private EditText toInput;
+    private EditText jumpNumber;
     private int startSite = 1;
     private int endSite = 4;
     private LinearLayout soundControlsContainer;
@@ -246,6 +247,36 @@ Toast.makeText(this,
 
         settingsLayout.addView(row);
 
+        LinearLayout jumpRow = new LinearLayout(this);
+        jumpRow.setGravity(Gravity.CENTER_VERTICAL);
+        jumpRow.setPadding(dp(5), dp(5), dp(5), dp(5));
+
+        TextView jumpLabel = new TextView(this);
+        jumpLabel.setText("Jump to Website:");
+        jumpLabel.setTextColor(JJK_TEXT);
+        jumpLabel.setTextSize(12);
+        jumpRow.addView(jumpLabel);
+
+        jumpNumber = new EditText(this);
+        jumpNumber.setSingleLine(true);
+        jumpNumber.setTextSize(13);
+        jumpNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
+        jumpNumber.setHint("Website #");
+        styleEditText(jumpNumber);
+
+        LinearLayout.LayoutParams jumpParams =
+                new LinearLayout.LayoutParams(0, dp(40), 1f);
+        jumpParams.setMargins(dp(8), 0, dp(8), 0);
+        jumpRow.addView(jumpNumber, jumpParams);
+
+        Button jumpButton = new Button(this);
+        jumpButton.setText("GO");
+        styleButton(jumpButton, JJK_PURPLE);
+        jumpButton.setOnClickListener(v -> jumpToSite());
+        jumpRow.addView(jumpButton);
+
+        settingsLayout.addView(jumpRow);
+
         TextView capacityInfo = new TextView(this);
         capacityInfo.setText(
                 "Multi-Profile Supported: " + profilesSupported
@@ -322,6 +353,39 @@ Toast.makeText(this,
         settingsOpen = false;
         settingsLayout.setVisibility(View.GONE);
         homeLayout.setVisibility(View.VISIBLE);
+    }
+
+    private void jumpToSite() {
+        String value = jumpNumber.getText().toString().trim();
+
+        if (value.isEmpty()) {
+            Toast.makeText(this, "Enter website number",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            int number = Integer.parseInt(value);
+
+            if (number < startSite || number > endSite) {
+                Toast.makeText(this,
+                        "Currently showing Website " + startSite
+                        + " to " + endSite,
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            int index = number - startSite;
+
+            if (index >= 0 && index < siteCells.size()) {
+                showHomePage();
+                gridScroll.post(() -> gridScroll.smoothScrollTo(
+                        0, siteCells.get(index).getTop()));
+            }
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid website number",
+                    Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void applyTypedWebsiteRange() {

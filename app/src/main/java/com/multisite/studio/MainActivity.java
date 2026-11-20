@@ -1,7 +1,6 @@
 package com.multisite.studio;
 
 import android.app.Activity;
-import android.net.Uri;
 import android.os.Bundle;
 import android.graphics.Color;
 import android.view.Gravity;
@@ -525,51 +524,11 @@ Toast.makeText(this,
         return address;
     }
 
-    private String getYouTubeVideoId(String address) {
-        try {
-            Uri uri = Uri.parse(address);
-            String host = uri.getHost();
-
-            if (host == null) return null;
-            host = host.toLowerCase();
-
-            if (host.equals("youtu.be")) {
-                if (!uri.getPathSegments().isEmpty())
-                    return uri.getPathSegments().get(0);
-            }
-
-            if (host.equals("youtube.com") ||
-                    host.endsWith(".youtube.com")) {
-
-                String videoId = uri.getQueryParameter("v");
-                if (videoId != null && !videoId.isEmpty())
-                    return videoId;
-
-                java.util.List<String> parts = uri.getPathSegments();
-
-                if (parts.size() >= 2) {
-                    String type = parts.get(0);
-
-                    if (type.equals("shorts") ||
-                            type.equals("embed") ||
-                            type.equals("live")) {
-                        return parts.get(1);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            return null;
-        }
-
-        return null;
-    }
-
     private void loadWebsite(WebView web, String address) {
         if (web == null || address == null || address.trim().isEmpty()) {
             return;
         }
 
-        // Open the actual YouTube website, not an embedded player.
         web.loadUrl(address.trim());
     }
 
@@ -1009,26 +968,6 @@ Toast.makeText(this,
                 " {childList:true,subtree:true});" +
                 "}" +
                 "document.addEventListener('play', applyMedia, true);" +
-                "if (window.__multiSiteYtTimer) {" +
-                " clearInterval(window.__multiSiteYtTimer);" +
-                "}" +
-                "var frames = document.querySelectorAll(" +
-                " 'iframe[src*=\"youtube.com/embed\"]');" +
-                "if (frames.length) {" +
-                " var tries = 0;" +
-                " window.__multiSiteYtTimer = setInterval(function() {" +
-                "  var command = window.__multiSiteMute ? 'mute' : 'unMute';" +
-                "  frames.forEach(function(frame) {" +
-                "   try {" +
-                "    frame.contentWindow.postMessage(JSON.stringify({" +
-                "     event:'command',func:command,args:[]" +
-                "    }), '*');" +
-                "   } catch(e) {}" +
-                "  });" +
-                "  tries++;" +
-                "  if (tries >= 20) clearInterval(window.__multiSiteYtTimer);" +
-                " }, 500);" +
-                "}" +
                 "})();";
 
         web.evaluateJavascript(script, null);

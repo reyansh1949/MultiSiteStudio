@@ -72,9 +72,12 @@ public class MainActivity extends Activity {
                 prefs.getInt("site_end", oldCount)));
         siteCount = endSite - startSite + 1;
 
-        profilesSupported = WebViewFeature.isFeatureSupported(
-                WebViewFeature.MULTI_PROFILE);
+profilesSupported = WebViewFeature.isFeatureSupported(
+        WebViewFeature.MULTI_PROFILE);
 
+Toast.makeText(this,
+        "Multi-Profile Supported: " + profilesSupported,
+        Toast.LENGTH_LONG).show();
         buildInterface();
         createSites();
     }

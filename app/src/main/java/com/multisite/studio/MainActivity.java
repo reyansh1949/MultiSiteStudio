@@ -41,15 +41,14 @@ public class MainActivity extends Activity {
     private int savedGridIndex;
     private int savedWebChildIndex;
     private EditText bulkUrl;
-    private Spinner startSpinner;
-    private Spinner endSpinner;
+    private EditText fromInput;
+    private EditText toInput;
     private int startSite = 1;
     private int endSite = 4;
     private LinearLayout soundControlsContainer;
     private LinearLayout proxyControlsContainer;
     private boolean muteAll = false;
     private final ArrayList<Boolean> siteMuteStates = new ArrayList<>();
-    private EditText jumpNumber;
     private SharedPreferences prefs;
     private int siteCount = 4;
     private boolean profilesSupported = false;
@@ -64,11 +63,11 @@ public class MainActivity extends Activity {
         super.onCreate(state);
 
         prefs = getSharedPreferences("multisite_data", MODE_PRIVATE);
-        int oldCount = Math.max(1, Math.min(25,
-                prefs.getInt("site_count", 4)));
-        startSite = Math.max(1, Math.min(25,
+        int oldCount = Math.max(1, Math.min(1000,
+                prefs.getInt("site_count", 1)));
+        startSite = Math.max(1, Math.min(1000,
                 prefs.getInt("site_start", 1)));
-        endSite = Math.max(startSite, Math.min(25,
+        endSite = Math.max(startSite, Math.min(1000,
                 prefs.getInt("site_end", oldCount)));
         siteCount = endSite - startSite + 1;
 
@@ -191,96 +190,72 @@ Toast.makeText(this,
 
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(6), dp(5), dp(6), dp(5));
+        row.setPadding(dp(5), dp(5), dp(5), dp(5));
         row.setBackground(rounded(JJK_CARD, JJK_PURPLE, 10));
 
         TextView label = new TextView(this);
-        label.setText("Websites: ");
+        label.setText("Website:");
         label.setTextColor(JJK_TEXT);
         label.setTypeface(null, android.graphics.Typeface.BOLD);
+        label.setTextSize(11);
         row.addView(label);
 
         TextView fromLabel = new TextView(this);
-        fromLabel.setText("From:");
+        fromLabel.setText(" From:");
         fromLabel.setTextColor(JJK_TEXT);
+        fromLabel.setTextSize(11);
         row.addView(fromLabel);
 
-        String[] rangeValues = new String[25];
-        for (int i = 0; i < 25; i++) rangeValues[i] = String.valueOf(i + 1);
+        fromInput = new EditText(this);
+        fromInput.setSingleLine(true);
+        fromInput.setTextSize(13);
+        fromInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        fromInput.setHint("1");
+        fromInput.setText(String.valueOf(startSite));
+        styleEditText(fromInput);
 
-        ArrayAdapter<String> rangeAdapter = whiteSpinnerAdapter(rangeValues);
-
-        startSpinner = new Spinner(this);
-        startSpinner.setAdapter(rangeAdapter);
-        startSpinner.setSelection(startSite - 1);
-        row.addView(startSpinner);
+        LinearLayout.LayoutParams inputParams =
+                new LinearLayout.LayoutParams(0, dp(40), 1f);
+        inputParams.setMargins(dp(3), 0, dp(3), 0);
+        row.addView(fromInput, inputParams);
 
         TextView toLabel = new TextView(this);
-        toLabel.setText(" To:");
+        toLabel.setText("To:");
         toLabel.setTextColor(JJK_TEXT);
+        toLabel.setTextSize(11);
         row.addView(toLabel);
 
-        endSpinner = new Spinner(this);
-        endSpinner.setAdapter(rangeAdapter);
-        endSpinner.setSelection(endSite - 1);
-        row.addView(endSpinner);
+        toInput = new EditText(this);
+        toInput.setSingleLine(true);
+        toInput.setTextSize(13);
+        toInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        toInput.setHint("1000");
+        toInput.setText(String.valueOf(endSite));
+        styleEditText(toInput);
 
-        AdapterView.OnItemSelectedListener listener =
-                new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent,
-                    View view, int position, long id) {
-                int from = startSpinner.getSelectedItemPosition() + 1;
-                int to = endSpinner.getSelectedItemPosition() + 1;
-                if (from > to) {
-                    if (parent == startSpinner) {
-                        endSpinner.setSelection(from - 1);
-                        to = from;
-                    } else {
-                        startSpinner.setSelection(to - 1);
-                        from = to;
-                    }
-                }
-                applyWebsiteRange(from, to);
-            }
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {}
-        };
-        startSpinner.setOnItemSelectedListener(listener);
-        endSpinner.setOnItemSelectedListener(listener);
+        LinearLayout.LayoutParams toParams =
+                new LinearLayout.LayoutParams(0, dp(40), 1f);
+        toParams.setMargins(dp(3), 0, dp(5), 0);
+        row.addView(toInput, toParams);
+
+        Button rangeGo = new Button(this);
+        rangeGo.setText("GO");
+        rangeGo.setTextSize(10);
+        styleButton(rangeGo, JJK_PURPLE);
+        rangeGo.setOnClickListener(v -> applyTypedWebsiteRange());
+        row.addView(rangeGo);
 
         settingsLayout.addView(row);
 
-        LinearLayout jumpRow = new LinearLayout(this);
-        jumpRow.setOrientation(LinearLayout.HORIZONTAL);
-        jumpRow.setGravity(Gravity.CENTER_VERTICAL);
-        jumpRow.setPadding(dp(8), dp(5), dp(8), dp(5));
-        jumpRow.setBackground(rounded(JJK_CARD, JJK_PURPLE, 10));
+        TextView capacityInfo = new TextView(this);
+        capacityInfo.setText(
+                "Multi-Profile Supported: " + profilesSupported
+                + "\\nMaximum 1000 websites (Available: 1000)");
+        capacityInfo.setTextColor(JJK_MUTED);
+        capacityInfo.setTextSize(11);
+        capacityInfo.setPadding(dp(5), dp(7), dp(5), dp(7));
+        settingsLayout.addView(capacityInfo);
 
-        TextView jumpLabel = new TextView(this);
-        jumpLabel.setText("Jump to:");
-        jumpLabel.setTextColor(JJK_TEXT);
-        jumpRow.addView(jumpLabel);
-
-        jumpNumber = new EditText(this);
-        jumpNumber.setSingleLine(true);
-        jumpNumber.setTextSize(14);
-        jumpNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
-        jumpNumber.setHint("Website #");
-        styleEditText(jumpNumber);
-        LinearLayout.LayoutParams jumpInputParams =
-                new LinearLayout.LayoutParams(0, -2, 1f);
-        jumpInputParams.setMargins(dp(10), 0, dp(8), 0);
-        jumpRow.addView(jumpNumber, jumpInputParams);
-
-        Button jumpButton = new Button(this);
-        jumpButton.setText("GO");
-        jumpButton.setTextSize(10);
-        styleButton(jumpButton, JJK_PURPLE);
-        jumpButton.setOnClickListener(v -> jumpToSite());
-        jumpRow.addView(jumpButton, new LinearLayout.LayoutParams(-2, -2));
-
-        settingsLayout.addView(jumpRow);
         buildSoundControls();
         buildProxyControls();
 
@@ -350,6 +325,35 @@ Toast.makeText(this,
         homeLayout.setVisibility(View.VISIBLE);
     }
 
+    private void applyTypedWebsiteRange() {
+        String fromText = fromInput.getText().toString().trim();
+        String toText = toInput.getText().toString().trim();
+
+        if (fromText.isEmpty() || toText.isEmpty()) {
+            Toast.makeText(this, "Enter From and To numbers",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            int from = Integer.parseInt(fromText);
+            int to = Integer.parseInt(toText);
+
+            if (from < 1 || to > 1000 || from > to) {
+                Toast.makeText(this,
+                        "Enter a valid range from 1 to 1000",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            applyWebsiteRange(from, to);
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid website number",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
     private void applyWebsiteRange(int from, int to) {
         if (fullScreenIndex >= 0) return;
         if (from == startSite && to == endSite) return;
@@ -375,35 +379,6 @@ Toast.makeText(this,
                 Toast.LENGTH_SHORT).show();
     }
 
-
-    private void jumpToSite() {
-        String value = jumpNumber.getText().toString().trim();
-
-        if (value.isEmpty()) {
-            Toast.makeText(this, "Enter website number", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int number;
-        try {
-            number = Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            Toast.makeText(this, "Invalid website number", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (number < startSite || number > endSite) {
-            Toast.makeText(this, "Enter a number from " + startSite +
-                    " to " + endSite, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        int index = number - startSite;
-        if (index < siteCells.size()) {
-            gridScroll.post(() -> gridScroll.smoothScrollTo(
-                    0, siteCells.get(index).getTop()));
-        }
-    }
 
     private void createSites() {
         if (!profilesSupported) {

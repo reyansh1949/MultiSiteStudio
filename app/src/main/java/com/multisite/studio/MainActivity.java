@@ -121,6 +121,36 @@ Toast.makeText(this,
         edit.setBackground(rounded(JJK_SURFACE, JJK_PURPLE, 8));
     }
 
+
+    private ArrayAdapter<String> whiteSpinnerAdapter(String[] items) {
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(
+                this, android.R.layout.simple_spinner_item, items) {
+            @Override
+            public View getView(int position, View convertView,
+                    android.view.ViewGroup parent) {
+                TextView text = (TextView) super.getView(
+                        position, convertView, parent);
+                text.setTextColor(JJK_TEXT);
+                text.setTextSize(14);
+                return text;
+            }
+
+            @Override
+            public View getDropDownView(int position, View convertView,
+                    android.view.ViewGroup parent) {
+                TextView text = (TextView) super.getDropDownView(
+                        position, convertView, parent);
+                text.setTextColor(JJK_TEXT);
+                text.setBackgroundColor(JJK_SURFACE);
+                text.setPadding(dp(12), dp(10), dp(12), dp(10));
+                return text;
+            }
+        };
+        adapter.setDropDownViewResource(
+                android.R.layout.simple_spinner_dropdown_item);
+        return adapter;
+    }
+
     private void buildInterface() {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -178,10 +208,7 @@ Toast.makeText(this,
         String[] rangeValues = new String[25];
         for (int i = 0; i < 25; i++) rangeValues[i] = String.valueOf(i + 1);
 
-        ArrayAdapter<String> rangeAdapter = new ArrayAdapter<>(
-                this, android.R.layout.simple_spinner_item, rangeValues);
-        rangeAdapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item);
+        ArrayAdapter<String> rangeAdapter = whiteSpinnerAdapter(rangeValues);
 
         startSpinner = new Spinner(this);
         startSpinner.setAdapter(rangeAdapter);
@@ -222,28 +249,38 @@ Toast.makeText(this,
         startSpinner.setOnItemSelectedListener(listener);
         endSpinner.setOnItemSelectedListener(listener);
 
+        settingsLayout.addView(row);
+
+        LinearLayout jumpRow = new LinearLayout(this);
+        jumpRow.setOrientation(LinearLayout.HORIZONTAL);
+        jumpRow.setGravity(Gravity.CENTER_VERTICAL);
+        jumpRow.setPadding(dp(8), dp(5), dp(8), dp(5));
+        jumpRow.setBackground(rounded(JJK_CARD, JJK_PURPLE, 10));
+
         TextView jumpLabel = new TextView(this);
-        jumpLabel.setText("  Jump to ");
+        jumpLabel.setText("Jump to:");
         jumpLabel.setTextColor(JJK_TEXT);
-        row.addView(jumpLabel);
+        jumpRow.addView(jumpLabel);
 
         jumpNumber = new EditText(this);
         jumpNumber.setSingleLine(true);
         jumpNumber.setTextSize(14);
         jumpNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
-        jumpNumber.setHint("#");
+        jumpNumber.setHint("Website #");
         styleEditText(jumpNumber);
-        int jumpWidth = (int) (52 * getResources().getDisplayMetrics().density);
-        row.addView(jumpNumber, new LinearLayout.LayoutParams(jumpWidth, -2));
+        LinearLayout.LayoutParams jumpInputParams =
+                new LinearLayout.LayoutParams(0, -2, 1f);
+        jumpInputParams.setMargins(dp(10), 0, dp(8), 0);
+        jumpRow.addView(jumpNumber, jumpInputParams);
 
         Button jumpButton = new Button(this);
         jumpButton.setText("GO");
         jumpButton.setTextSize(10);
         styleButton(jumpButton, JJK_PURPLE);
         jumpButton.setOnClickListener(v -> jumpToSite());
-        row.addView(jumpButton, new LinearLayout.LayoutParams(-2, -2));
+        jumpRow.addView(jumpButton, new LinearLayout.LayoutParams(-2, -2));
 
-        settingsLayout.addView(row);
+        settingsLayout.addView(jumpRow);
         buildSoundControls();
         buildProxyControls();
 
@@ -645,14 +682,7 @@ Toast.makeText(this,
         Spinner siteSpinner = new Spinner(this);
 
         ArrayAdapter<String> soundAdapter =
-                new ArrayAdapter<>(
-                        this,
-                        android.R.layout.simple_spinner_item,
-                        siteNames
-                );
-
-        soundAdapter.setDropDownViewResource(
-                android.R.layout.simple_spinner_dropdown_item);
+                whiteSpinnerAdapter(siteNames.toArray(new String[0]));
 
         siteSpinner.setAdapter(soundAdapter);
 
@@ -766,8 +796,8 @@ Toast.makeText(this,
         }
 
         Spinner siteSpinner = new Spinner(this);
-        siteSpinner.setAdapter(new ArrayAdapter<String>(
-                this, android.R.layout.simple_spinner_dropdown_item, sites));
+        siteSpinner.setAdapter(
+                whiteSpinnerAdapter(sites.toArray(new String[0])));
         proxyControlsContainer.addView(siteSpinner);
 
         String[] codes = Locale.getISOCountries();
@@ -781,9 +811,8 @@ Toast.makeText(this,
         }
 
         Spinner countrySpinner = new Spinner(this);
-        countrySpinner.setAdapter(new ArrayAdapter<String>(
-                this, android.R.layout.simple_spinner_dropdown_item,
-                countryNames));
+        countrySpinner.setAdapter(
+                whiteSpinnerAdapter(countryNames.toArray(new String[0])));
         proxyControlsContainer.addView(countrySpinner);
 
         ArrayList<String> slots = new ArrayList<>();
@@ -792,8 +821,8 @@ Toast.makeText(this,
         }
 
         Spinner slotSpinner = new Spinner(this);
-        slotSpinner.setAdapter(new ArrayAdapter<String>(
-                this, android.R.layout.simple_spinner_dropdown_item, slots));
+        slotSpinner.setAdapter(
+                whiteSpinnerAdapter(slots.toArray(new String[0])));
         proxyControlsContainer.addView(slotSpinner);
 
         TextView ipLabel = new TextView(this);

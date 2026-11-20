@@ -565,36 +565,13 @@ Toast.makeText(this,
     }
 
     private void loadWebsite(WebView web, String address) {
-        String videoId = getYouTubeVideoId(address);
-
-        if (videoId != null) {
-            String html =
-                    "<!DOCTYPE html>" +
-                    "<html><head>" +
-                    "<meta name='viewport' content='width=device-width, initial-scale=1, maximum-scale=1'>" +
-                    "<style>" +
-                    "html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;}" +
-                    "iframe{display:block;width:100%;height:100%;border:0;}" +
-                    "</style></head><body>" +
-                    "<iframe src='https://www.youtube.com/embed/" + videoId +
-                    "?autoplay=1&mute=1&playsinline=1&rel=0&controls=1&enablejsapi=1&origin=https://com.multisite.studio' " +
-                    "referrerpolicy='strict-origin' " +
-                    "allow='autoplay; encrypted-media; picture-in-picture; fullscreen' " +
-                    "allowfullscreen></iframe>" +
-                    "</body></html>";
-
-            web.loadDataWithBaseURL(
-                    "https://com.multisite.studio/",
-                    html,
-                    "text/html",
-                    "UTF-8",
-                    null
-            );
-        } else {
-            web.loadUrl(address);
+        if (web == null || address == null || address.trim().isEmpty()) {
+            return;
         }
-    }
 
+        // Open the actual YouTube website, not an embedded player.
+        web.loadUrl(address.trim());
+    }
 
     private void buildSoundControls() {
         if (soundControlsContainer != null) {

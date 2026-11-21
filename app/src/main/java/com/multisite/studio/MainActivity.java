@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.graphics.Color;
 import android.view.Gravity;
 import android.view.View;
+import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -23,6 +24,7 @@ public class MainActivity extends Activity {
     private final ArrayList<WebView> webViews = new ArrayList<>();
     private final ArrayList<EditText> urlFields = new ArrayList<>();
     private final ArrayList<LinearLayout> siteCells = new ArrayList<>();
+    private final ArrayList<Boolean> siteScrollLocks = new ArrayList<>();
 
     private LinearLayout root;
     private LinearLayout homeLayout;
@@ -460,6 +462,7 @@ Toast.makeText(this,
 
         webViews.clear();
         siteCells.clear();
+        siteScrollLocks.clear();
         urlFields.clear();
         grid.removeAllViews();
 
@@ -473,12 +476,17 @@ Toast.makeText(this,
             final int index = i;
             final int globalIndex = startSite + i - 1;
             final int websiteNumber = globalIndex + 1;
+            siteScrollLocks.add(false);
 
             LinearLayout cell = new LinearLayout(this);
             cell.setOrientation(LinearLayout.VERTICAL);
             cell.setPadding(dp(5), dp(5), dp(5), dp(5));
             cell.setBackground(rounded(JJK_CARD, JJK_PURPLE, 12));
             siteCells.add(cell);
+
+            LinearLayout header = new LinearLayout(this);
+            header.setOrientation(LinearLayout.HORIZONTAL);
+            header.setGravity(Gravity.CENTER_VERTICAL);
 
             TextView label = new TextView(this);
             label.setText("Website " + websiteNumber);
@@ -487,7 +495,34 @@ Toast.makeText(this,
             label.setTypeface(null, android.graphics.Typeface.BOLD);
             label.setTextSize(14);
             label.setPadding(0, dp(4), 0, dp(4));
-            cell.addView(label);
+
+            header.addView(label,
+                    new LinearLayout.LayoutParams(0, -2, 1));
+
+            TextView lockIcon = new TextView(this);
+            lockIcon.setText("🔓");
+            lockIcon.setTextSize(20);
+            lockIcon.setGravity(Gravity.CENTER);
+            lockIcon.setPadding(dp(12), dp(3), dp(8), dp(3));
+            lockIcon.setContentDescription("Lock website scrolling");
+
+            lockIcon.setOnClickListener(v -> {
+                boolean locked = !siteScrollLocks.get(index);
+                siteScrollLocks.set(index, locked);
+
+                lockIcon.setText(locked ? "🔒" : "🔓");
+                lockIcon.setContentDescription(
+                        locked ? "Website scroll locked" :
+                                 "Website scroll unlocked");
+
+                Toast.makeText(this,
+                        "Website " + websiteNumber +
+                        (locked ? " locked" : " unlocked"),
+                        Toast.LENGTH_SHORT).show();
+            });
+
+            header.addView(lockIcon);
+            cell.addView(header);
 
             EditText url = new EditText(this);
             url.setSingleLine(true);
@@ -500,6 +535,28 @@ Toast.makeText(this,
 
             WebView web = new WebView(this);
             web.setBackgroundColor(Color.BLACK);
+
+            web.setOnTouchListener((v, event) -> {
+                int action = event.getActionMasked();
+
+                if (siteScrollLocks.get(index)) {
+                    if (action == MotionEvent.ACTION_DOWN ||
+                            action == MotionEvent.ACTION_MOVE) {
+                        if (web.getParent() != null) {
+                            web.getParent()
+                               .requestDisallowInterceptTouchEvent(true);
+                        }
+                    } else if (action == MotionEvent.ACTION_UP ||
+                               action == MotionEvent.ACTION_CANCEL) {
+                        if (web.getParent() != null) {
+                            web.getParent()
+                               .requestDisallowInterceptTouchEvent(false);
+                        }
+                    }
+                }
+
+                return false;
+            });
 
             if (profilesSupported) {
                 try {

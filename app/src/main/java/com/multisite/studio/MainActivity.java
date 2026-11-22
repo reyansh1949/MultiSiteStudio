@@ -9,6 +9,7 @@ import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebChromeClient;
 import android.widget.*;
 import android.content.SharedPreferences;
 import android.text.InputType;
@@ -55,6 +56,9 @@ public class MainActivity extends Activity {
     private int siteCount = 4;
     private boolean profilesSupported = false;
     private int fullScreenIndex = -1;
+    private View youtubeCustomView;
+    private WebChromeClient.CustomViewCallback youtubeCustomViewCallback;
+    private int savedSystemUiVisibility;
     private ViewGroup fullscreenParent;
     private int fullscreenChildIndex;
     private final ArrayList<View> savedRootViews = new ArrayList<>();
@@ -595,6 +599,21 @@ Toast.makeText(this,
                     applyMuteToWebView(view, index);
                 }
             });
+
+            web.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public void onShowCustomView(
+                        View view,
+                        CustomViewCallback callback) {
+                    showYoutubeCustomView(view, callback);
+                }
+
+                @Override
+                public void onHideCustomView() {
+                    hideYoutubeCustomView();
+                }
+            });
+
             webViews.add(web);
 
             cell.addView(web, new LinearLayout.LayoutParams(-1, videoHeight));
@@ -1115,6 +1134,58 @@ Toast.makeText(this,
     }
 
 
+    private void showYoutubeCustomView(
+            View view,
+            WebChromeClient.CustomViewCallback callback) {
+
+        if (youtubeCustomView != null) {
+            callback.onCustomViewHidden();
+            return;
+        }
+
+        FrameLayout decor = (FrameLayout) getWindow().getDecorView();
+
+        savedSystemUiVisibility = decor.getSystemUiVisibility();
+        youtubeCustomView = view;
+        youtubeCustomViewCallback = callback;
+
+        decor.addView(view, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        decor.setSystemUiVisibility(
+                View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+        );
+    }
+
+    private void hideYoutubeCustomView() {
+        if (youtubeCustomView == null) return;
+
+        FrameLayout decor = (FrameLayout) getWindow().getDecorView();
+
+        View view = youtubeCustomView;
+        WebChromeClient.CustomViewCallback callback =
+                youtubeCustomViewCallback;
+
+        youtubeCustomView = null;
+        youtubeCustomViewCallback = null;
+
+        if (view.getParent() instanceof ViewGroup) {
+            ((ViewGroup) view.getParent()).removeView(view);
+        }
+
+        decor.setSystemUiVisibility(savedSystemUiVisibility);
+
+        if (callback != null) {
+            callback.onCustomViewHidden();
+        }
+    }
+
     private void showFull(int index) {
         if (index < 0 || index >= webViews.size()) return;
         if (fullScreenIndex >= 0) return;
@@ -1190,7 +1261,9 @@ Toast.makeText(this,
 
     @Override
     public void onBackPressed() {
-        if (fullScreenIndex >= 0) {
+        if (youtubeCustomView != null) {
+            hideYoutubeCustomView();
+        } else if (fullScreenIndex >= 0) {
             returnToGrid();
         } else if (settingsOpen) {
             showHomePage();
